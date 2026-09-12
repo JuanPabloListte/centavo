@@ -578,3 +578,124 @@ input[type='search'] {
     transition: background-color 0.12s ease, box-shadow 0.12s ease;
   }
 }
+
+/* ---- cargar un resumen ---- */
+
+.carga {
+  display: grid;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.zona-carga {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  text-align: center;
+  padding: 36px 20px;
+  background: var(--superficie);
+  border: 2px dashed var(--linea);
+  border-radius: var(--radio);
+  cursor: pointer;
+}
+
+.zona-carga:hover,
+.zona-activa {
+  border-color: var(--acento);
+  background: var(--acento-suave);
+}
+
+.zona-carga:focus-within {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.opcion {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  cursor: pointer;
+}
+
+.opcion input {
+  margin-top: 5px;
+  accent-color: var(--acento);
+}
+
+.opcion > span {
+  display: grid;
+  gap: 2px;
+}
+
+.boton-principal,
+.acciones button {
+  justify-self: start;
+  padding: 8px 16px;
+  border-radius: var(--radio);
+  border: 1px solid var(--linea);
+  background: var(--superficie);
+  cursor: pointer;
+}
+
+.boton-principal,
+.acciones .boton-principal {
+  border-color: var(--acento);
+  background: var(--acento);
+  color: var(--superficie);
+  font-weight: 600;
+}
+
+.boton-principal:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pasos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.paso {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--superficie);
+  border: 1px solid var(--linea-suave);
+  border-radius: var(--radio);
+}
+
+.paso-icono {
+  font-weight: 700;
+  text-align: center;
+  color: var(--muy-tenue);
+}
+
+.paso-hecho .paso-icono {
+  color: var(--positivo);
+}
+
+.paso-fallo .paso-icono {
+  color: var(--negativo);
+}
+
+.paso-en_curso .paso-icono {
+  color: var(--atencion);
+}
+
+.paso-pendiente {
+  opacity: 0.6;
+}
+
+.acciones {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

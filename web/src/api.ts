@@ -1,4 +1,5 @@
 import type {
+  CargaCreada,
   Categoria,
   DecisionRespuesta,
   Grupos,
@@ -58,8 +59,23 @@ export const api = {
   resumenes: () => pedir<ResumenItem[]>('/api/resumenes'),
   reporte: (id: number) => pedir<Reporte>(`/api/resumenes/${id}/reporte`),
   proyeccion: () => pedir<Proyeccion>('/api/proyeccion'),
+  cargaActiva: () => pedir<CargaCreada | null>('/api/cargas/activa'),
+  cargar: (archivo: File, conModelo: boolean) =>
+    pedir<CargaCreada>(
+      `/api/cargas?nombre=${encodeURIComponent(archivo.name)}&con_modelo=${conModelo}`,
+      { method: 'POST', headers: { 'Content-Type': tipoDeArchivo(archivo) }, body: archivo },
+    ),
 }
 
 export function mensajeDe(error: unknown): string {
   return error instanceof ErrorApi ? error.message : 'Pasó algo inesperado. Mirá la consola.'
+}
+
+/** El tipo con el que viaja el archivo. Windows suele declarar un CSV como planilla
+ *  de Excel: lo que no es PDF ni CSV va como binario genérico, y el servidor
+ *  detecta el formato por el contenido. */
+function tipoDeArchivo(archivo: File): string {
+  return archivo.type === 'application/pdf' || archivo.type === 'text/csv'
+    ? archivo.type
+    : 'application/octet-stream'
 }

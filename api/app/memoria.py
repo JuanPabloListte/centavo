@@ -23,6 +23,7 @@ la compuerta no se clasifica ni se corrige: sus movimientos no son de fiar.
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Callable
 
 import psycopg
 
@@ -142,7 +143,13 @@ def aplicar_decision(conn: psycopg.Connection, clave: str, categoria: str) -> in
         raise
 
 
-def clasificar_pendientes(conn: psycopg.Connection, clasificador=None) -> dict[str, int]:
+def clasificar_pendientes(
+    conn: psycopg.Connection,
+    clasificador=None,
+    *,
+    statement_id: int | None = None,
+    al_avanzar: Callable[[int, int], None] | None = None,
+) -> dict[str, int]:
     """Clasifica los movimientos 'sin_procesar' de resúmenes cuadrados.
 
     Orden: memoria -> el pago que devuelve -> evidencia -> modelo. Sin
@@ -152,6 +159,13 @@ def clasificar_pendientes(conn: psycopg.Connection, clasificador=None) -> dict[s
 
     Las devoluciones van al final: así su pago, si está en el mismo lote, ya
     quedó resuelto cuando les toca.
+
+    - `statement_id` limita a un resumen: sirve para pasarle al modelo sólo el
+      resumen recién cargado, y no lo pendiente de todos los meses.
+    - `al_avanzar(hechos, total)` se llama antes de cada movimiento y al final.
+    - Con `clasificador`, cada movimiento se guarda apenas se clasifica: una
+      corrida del modelo tarda minutos, y si se corta no pierde lo hecho. Sin
+      modelo, todo va en una sola transacción.
     """
     memoria = cargar_memoria(conn)
     conteo: Counter[str] = Counter()
@@ -164,13 +178,18 @@ def clasificar_pendientes(conn: psycopg.Connection, clasificador=None) -> dict[s
             JOIN statements s ON s.id = t.statement_id
             WHERE s.estado = 'cuadrado'
               AND t.estado_clasificacion = 'sin_procesar'
+              AND (%(sid)s::bigint IS NULL OR t.statement_id = %(sid)s)
             ORDER BY (t.devuelve_a IS NOT NULL), t.id
-            """
+            """,
+            {"sid": statement_id},
         )
         filas = cur.fetchall()
 
+    total = len(filas)
     try:
-        for tid, descripcion, monto, clave, titular, devuelve_a in filas:
+        for hechos, (tid, descripcion, monto, clave, titular, devuelve_a) in enumerate(filas):
+            if al_avanzar is not None:
+                al_avanzar(hechos, total)
             if clave in memoria:
                 categoria, via, estado, confianza = memoria[clave], "regla", "resuelto", 1.0
             elif devuelve_a is not None:
@@ -207,11 +226,15 @@ def clasificar_pendientes(conn: psycopg.Connection, clasificador=None) -> dict[s
                     (categoria, round(confianza, 2), via, estado, tid),
                 )
             conteo[via if estado == "resuelto" else "needs_review"] += 1
+            if clasificador is not None:
+                conn.commit()
         conn.commit()
     except Exception:
         conn.rollback()
         raise
 
+    if al_avanzar is not None:
+        al_avanzar(total, total)
     return dict(conteo)
 
 

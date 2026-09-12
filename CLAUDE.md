@@ -63,7 +63,7 @@ en `MERCADO-PAGO.md`.
   remoto que configuró el usuario, nunca forzado; no se crean otros remotos.
 - Documentación en castellano rioplatense, con el estilo de los `FASE-*.md`: cada decisión con la
   evidencia que la sostiene, los números sin inflar y lo que el sistema no hace, dicho.
-- **Antes de dar algo por terminado:** `pytest` en `api/` (hoy 147 pasan y 1 se saltea),
+- **Antes de dar algo por terminado:** `pytest` en `api/` (hoy 156 pasan y 1 se saltea),
   `npm run build` en `web/`, y la interfaz probada en el navegador con el esquema `demo`.
 - Si el usuario pide una explicación o dice "no ejecutes", no toques nada.
 
@@ -128,10 +128,11 @@ api/app/
   reporte.py           reporte del mes
   recurrentes.py       recurrentes fijos por contraparte y proyección del mes siguiente, en piezas
   corridas.py          una fila por ingesta: tiempos, vías y costo del modelo, sin datos
+  cargas.py            carga desde el navegador en un hilo, con eventos para SSE; el archivo no queda en disco
   main.py, demo.py     API local; la misma API sobre el esquema demo
 api/tools/             un comando por archivo, más evaluar.py (benchmark de las fases 1 y 2)
 api/tests/             conftest.py (fixture db) y un test_*.py por tema
-web/src/               App.tsx (solapas), Revision.tsx, Resueltos.tsx, Reporte.tsx, Proyeccion.tsx, api.ts, tipos.ts, formato.ts
+web/src/               App.tsx (solapas), Cargar.tsx, Revision.tsx, Resueltos.tsx, Reporte.tsx, Proyeccion.tsx, api.ts, tipos.ts, formato.ts
 db/                    schema.sql y migraciones/
 api/Dockerfile, web/Dockerfile, web/nginx.conf, docker-compose.yml   el stack en contenedores
 ```

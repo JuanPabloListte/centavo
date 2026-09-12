@@ -18,14 +18,17 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import psycopg
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from .agents.patrones import es_memorizable, nombre_legible
-from .clasificar import cargar_categorias
+from .cargas import TAMANIO_MAXIMO, TIPOS_ACEPTADOS, Cargador, CargaEnCurso, flujo_sse
+from .clasificar import cargar_categorias, construir
 from .corridas import Corrida, conteo_del_resumen, ultimas
 from .memoria import (
     aplicar_decision,
+    cargar_memoria,
     clasificar_pendientes,
     grupos_pendientes,
     grupos_resueltos,
@@ -54,6 +57,18 @@ def get_conn() -> Iterator[psycopg.Connection]:
         yield conn
     finally:
         conn.close()
+
+
+def _crear_flota(conn: psycopg.Connection):
+    return construir("flota", categorias=cargar_categorias(conn), reglas=cargar_memoria(conn))
+
+
+_cargador = Cargador(conectar=conectar, crear_clasificador=_crear_flota)
+
+
+def get_cargador() -> Cargador:
+    """Las cargas en segundo plano. Se inyecta, como la conexión, para los tests."""
+    return _cargador
 
 
 def _pendientes(conn: psycopg.Connection) -> dict:
@@ -264,3 +279,74 @@ def corridas(
         c | {"empezo_en": c["empezo_en"].isoformat(), "segundos_modelo": str(c["segundos_modelo"])}
         for c in ultimas(conn, limite)
     ]
+
+
+# ---------------------------------------------------------------------------
+# Cargar un resumen desde el navegador
+# ---------------------------------------------------------------------------
+
+@app.post("/api/cargas", status_code=202)
+async def nueva_carga(
+    request: Request,
+    nombre: str = Query(min_length=1, max_length=255),
+    con_modelo: bool = False,
+    cargador: Cargador = Depends(get_cargador),
+) -> dict:
+    """El archivo viaja como cuerpo crudo con su tipo: application/pdf, text/csv
+    o application/octet-stream. No hace falta multipart, y ninguno de esos tipos
+    es de los que el navegador manda a otro origen sin preguntar antes: un sitio
+    ajeno abierto en el navegador no puede subir nada, porque la API no autoriza
+    otros orígenes."""
+    tipo = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if tipo not in TIPOS_ACEPTADOS:
+        raise HTTPException(
+            415, "Mandá el archivo como application/pdf, text/csv o application/octet-stream."
+        )
+    grande = HTTPException(413, f"El archivo supera los {TAMANIO_MAXIMO // 2**20} MB.")
+    declarado = request.headers.get("content-length", "")
+    if declarado.isdigit() and int(declarado) > TAMANIO_MAXIMO:
+        raise grande
+    partes, leido = [], 0
+    async for trozo in request.stream():
+        leido += len(trozo)
+        if leido > TAMANIO_MAXIMO:
+            raise grande
+        partes.append(trozo)
+    contenido = b"".join(partes)
+    if not contenido:
+        raise HTTPException(422, "El archivo está vacío.")
+    try:
+        carga = cargador.lanzar(nombre, contenido, con_modelo)
+    except CargaEnCurso as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return carga.resumen()
+
+
+@app.get("/api/cargas/activa")
+def carga_activa(cargador: Cargador = Depends(get_cargador)) -> dict | None:
+    """La carga en curso, si hay una: la interfaz la retoma al volver."""
+    activa = cargador.activa()
+    return None if activa is None else activa.resumen()
+
+
+@app.get("/api/cargas/{carga_id}/eventos")
+def eventos_de_carga(
+    carga_id: str, request: Request, cargador: Cargador = Depends(get_cargador)
+):
+    """El progreso de una carga, por SSE. Con Last-Event-ID retoma desde ahí; si
+    la carga terminó y ya no queda nada por mandar, 204, que le indica al
+    navegador que deje de reconectar."""
+    carga = cargador.obtener(carga_id)
+    if carga is None:
+        raise HTTPException(404, "No existe esa carga: se olvidan al reiniciar la API.")
+    ultimo = request.headers.get("last-event-id", "")
+    desde = int(ultimo) + 1 if ultimo.isdigit() else 0
+    if carga.terminada and desde >= len(carga.eventos):
+        return Response(status_code=204)
+    return StreamingResponse(
+        flujo_sse(carga, desde),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

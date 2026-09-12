@@ -1,11 +1,11 @@
 # Centavo — Fase 4
 
-**Estado: quinto incremento terminado.** API local y, en el navegador con React + Vite, el
+**Estado: sexto incremento terminado.** API local y, en el navegador con React + Vite, el
 reporte del mes, la bandeja de revisión, la corrección de decisiones y la proyección del mes
 que viene. Cinco meses reales cargados, de abril a agosto, que cuadran al centavo, con cada
 devolución unida a su pago. Todo corre también en contenedores, publicado sólo en 127.0.0.1,
-y cada ingesta deja una fila para observar el sistema. `pytest` pasa 147; uno más corre sólo
-contra el resumen real.
+cada ingesta deja una fila para observar el sistema y un resumen se puede cargar desde el
+navegador. `pytest` pasa 156; uno más corre sólo contra el resumen real.
 
 Las tareas de la fase están hechas. Lo que sigue, sin orden fijo, está al final.
 
@@ -23,6 +23,7 @@ Las tareas de la fase están hechas. Lo que sigue, sin orden fijo, está al fina
 | **API local** | `api/app/main.py` | Lo que usan las pantallas. Escucha sólo en 127.0.0.1. |
 | **Contenedores** | `docker-compose.yml`, `api/Dockerfile`, `web/Dockerfile` | Postgres, API e interfaz compilada, todo en 127.0.0.1. |
 | **Corridas** | `api/app/corridas.py` | Una fila por ingesta: tiempos, vías y costo del modelo, sin datos. |
+| **Cargar** | `web/src/Cargar.tsx`, `api/app/cargas.py` | Subir un resumen desde el navegador; corre en segundo plano, con progreso por SSE. |
 
 Verificado en el navegador sobre el esquema `demo`: una decisión desde la bandeja (una
 transferencia enviada con 2 movimientos → *Pagos y Transferencias*) bajó el contador de
@@ -383,6 +384,59 @@ ingesta, como `tools.evaluar`, que ya deja su propio JSON en `tools/resultados/`
 
 ---
 
+## Cargar un resumen desde el navegador
+
+La ingesta era por terminal, o por `POST /api/ingest` con una ruta del disco. Ahora hay una
+solapa **Cargar**: elegís o arrastrás el PDF, y la carga corre en segundo plano mientras la
+interfaz muestra cada paso.
+
+**Cómo está armado.**
+
+- **El archivo viaja crudo**, como cuerpo del pedido, con su tipo: `application/pdf`,
+  `text/csv` o `application/octet-stream`. No hizo falta sumar una librería de multipart, y
+  hay una razón de seguridad: ninguno de esos tipos es de los que un navegador le manda a
+  otro origen sin preguntar antes, y la API no autoriza otros orígenes. Un sitio abierto en
+  otra pestaña no puede subirle un archivo a la API local. Un `text/plain`, que sí se manda
+  sin preguntar, se rechaza con 415, y hay un test que lo fija.
+- **La carga corre en un hilo** de la API, con su propia conexión (`app/cargas.py`), y hace
+  lo mismo que `tools.ingerir`: leer, verificar la compuerta, guardar y clasificar con
+  memoria y evidencia. No hace falta Celery ni Redis: es una persona y una carga por vez.
+  Mientras hay una en curso, otra se rechaza con 409.
+- **El progreso llega por SSE**, en `GET /api/cargas/{id}/eventos`: un evento por paso, uno
+  por movimiento mientras trabaja el modelo, y uno final, `fin` o `falla`. Si cerrás la
+  solapa y volvés, la interfaz pregunta si hay una carga en curso y retoma el flujo.
+- **El archivo no queda en disco.** Se escribe en un directorio temporal para que el parser
+  lo lea y se borra ni bien termina, salga bien o mal. En la base queda lo mismo que por
+  terminal: el resumen, con su sha256 y el nombre del archivo sin carpetas. Un test mira que
+  el directorio temporal quede vacío después de cada carga.
+- **Cada salida deja una fila en `corridas`**, como las otras ingestas.
+
+**El modelo, opcional y acotado.** Una casilla pide pasarle a la flota local lo que la
+memoria y la evidencia no resolvieron. Para eso cambiaron dos cosas en
+`clasificar_pendientes`:
+
+- **Se limita al resumen que se cargó.** Sin eso, la flota clasificaría lo pendiente de todos
+  los meses. En la base real son 536 movimientos: a los 3,5 segundos por movimiento medidos
+  acá, más de media hora; a los 15 que midió la fase 2, más de dos.
+- **Con el modelo, cada movimiento se guarda apenas se clasifica.** Si la carga se corta a la
+  mitad, lo hecho no se pierde. Sin modelo sigue siendo una sola transacción.
+
+**Verificado.** En el navegador, con el esquema `demo`, una cuenta corriente sintética de 45
+movimientos recorrió los cuatro pasos y cuadró, sin errores en la consola, y el botón del
+reporte abrió ese resumen. Con el modelo, contra el contenedor, a través de nginx y con Ollama
+en el host, un CSV sintético de 3 movimientos mandó sus eventos a medida que pasaban: el
+primer movimiento llegó a los 65 segundos, que incluyen cargar el modelo en la GPU, y los otros
+dos a unos 3,5 segundos cada uno. Los tres salieron por consenso. Que cada evento llegara
+cuando el modelo terminaba ese movimiento, y no todos juntos al final, prueba que nginx no
+retiene el flujo.
+
+**Lo que no hace.** No cancela una carga en curso. Los eventos viven en la memoria de la API:
+si la API se reinicia, se pierde el seguimiento, aunque lo guardado queda guardado. Y no
+conserva el PDF: si después se arregla el parser, para volver a cargarlo hace falta el
+archivo.
+
+---
+
 ## Cómo se usa
 
 Con Docker corriendo, en dos terminales:
@@ -431,6 +485,9 @@ conexión.
 | GET | `/api/proyeccion` | Recurrentes fijos y proyección del mes siguiente al último cargado, en piezas. |
 | POST | `/api/ingest` | `{path}`: lo mismo que `tools.ingerir`, y `clasificacion` cuenta sólo ese resumen. 409 si ya estaba cargado o se superpone con otro. Deja una fila en `corridas`. |
 | GET | `/api/corridas` | Las últimas ingestas, con conteos. `?limite=` hasta 200. |
+| POST | `/api/cargas?nombre=&con_modelo=` | El archivo como cuerpo crudo. 202 con el id de la carga; 409 si hay otra en curso; 413, 415 o 422 si el pedido no sirve. |
+| GET | `/api/cargas/activa` | La carga en curso, o `null`. |
+| GET | `/api/cargas/{id}/eventos` | El progreso por SSE: `paso`, `progreso`, y al final `fin` o `falla`. |
 
 Si Postgres no responde, cualquier ruta da 503 con un mensaje que dice qué revisar. Las
 rutas de la fase 0 (`/health`, `/ingest`) pasaron a `/api/...`.
@@ -476,8 +533,6 @@ sumando todos. `tools.curva` imprime conteos, nunca nombres ni montos.
   después.
 - **Reportar por mes calendario.** El reporte es por resumen. Si cada PDF cubre un mes, es
   el reporte del mes.
-- **Cargar un PDF desde el navegador.** La ingesta sigue siendo por terminal, o por
-  `POST /api/ingest` con una ruta local.
 
 ---
 
@@ -488,6 +543,5 @@ sumando todos. `tools.curva` imprime conteos, nunca nombres ni montos.
    un bloque sin clasificar.
 2. **Con septiembre cargado después de revisar**: la curva de la memoria pasa a ser un
    acierto medido, y la proyección de septiembre se puede comparar contra lo que pasó.
-3. **Sin orden fijo**: cargar un PDF desde el navegador, comparar la proyección contra lo que
-   pasó, el contexto argentino para comparar meses y volver a medir la flota con tus
-   decisiones como etiquetas.
+3. **Sin orden fijo**: comparar la proyección contra lo que pasó, el contexto argentino para
+   comparar meses y volver a medir la flota con tus decisiones como etiquetas.

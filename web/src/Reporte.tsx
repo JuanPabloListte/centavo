@@ -9,7 +9,15 @@ const TIPO: Record<TipoLinea, string> = {
   interno: 'Interno',
 }
 
-export default function Reporte({ irARevision }: { irARevision: () => void }) {
+export default function Reporte({
+  irARevision,
+  irACargar,
+  resumenInicial = null,
+}: {
+  irARevision: () => void
+  irACargar: () => void
+  resumenInicial?: number | null
+}) {
   const [resumenes, setResumenes] = useState<ResumenItem[] | null>(null)
   const [elegido, setElegido] = useState<number | null>(null)
   const [reporte, setReporte] = useState<DatosReporte | null>(null)
@@ -22,7 +30,8 @@ export default function Reporte({ irARevision }: { irARevision: () => void }) {
       .then((lista) => {
         if (!vigente) return
         setResumenes(lista)
-        const primero = lista.find((r) => r.estado === 'cuadrado')
+        const pedido = lista.find((r) => r.id === resumenInicial && r.estado === 'cuadrado')
+        const primero = pedido ?? lista.find((r) => r.estado === 'cuadrado')
         if (primero) setElegido(primero.id)
       })
       .catch((e: unknown) => vigente && setError(mensajeDe(e)))
@@ -67,8 +76,11 @@ export default function Reporte({ irARevision }: { irARevision: () => void }) {
       <div className="vacio">
         <h1>Todavía no hay resúmenes</h1>
         <p>
-          Cargá uno con <code>python -m tools.ingerir ruta/al/resumen.pdf</code>.
+          Cargá uno desde el navegador, o por terminal con <code>python -m tools.ingerir</code>.
         </p>
+        <button type="button" className="boton-principal" onClick={irACargar}>
+          Cargar un resumen
+        </button>
       </div>
     )
   }

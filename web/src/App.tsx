@@ -1,12 +1,14 @@
 import { useState } from 'react'
+import Cargar from './Cargar'
 import Proyeccion from './Proyeccion'
 import Reporte from './Reporte'
 import Resueltos from './Resueltos'
 import Revision from './Revision'
 
-type Vista = 'revision' | 'resueltos' | 'reporte' | 'proyeccion'
+type Vista = 'cargar' | 'revision' | 'resueltos' | 'reporte' | 'proyeccion'
 
 const SOLAPAS: { vista: Vista; titulo: string }[] = [
+  { vista: 'cargar', titulo: 'Cargar' },
   { vista: 'revision', titulo: 'Revisión' },
   { vista: 'resueltos', titulo: 'Resueltos' },
   { vista: 'reporte', titulo: 'Reporte del mes' },
@@ -15,6 +17,14 @@ const SOLAPAS: { vista: Vista; titulo: string }[] = [
 
 export default function App() {
   const [vista, setVista] = useState<Vista>('revision')
+  const [resumenParaReporte, setResumenParaReporte] = useState<number | null>(null)
+
+  const irARevision = () => setVista('revision')
+  const irACargar = () => setVista('cargar')
+  const irAReporte = (statementId: number) => {
+    setResumenParaReporte(statementId)
+    setVista('reporte')
+  }
 
   return (
     <div className="app">
@@ -39,10 +49,13 @@ export default function App() {
       </header>
 
       <main className="contenido">
+        {vista === 'cargar' && <Cargar irARevision={irARevision} irAReporte={irAReporte} />}
         {vista === 'revision' && <Revision />}
         {vista === 'resueltos' && <Resueltos />}
-        {vista === 'reporte' && <Reporte irARevision={() => setVista('revision')} />}
-        {vista === 'proyeccion' && <Proyeccion irARevision={() => setVista('revision')} />}
+        {vista === 'reporte' && (
+          <Reporte irARevision={irARevision} irACargar={irACargar} resumenInicial={resumenParaReporte} />
+        )}
+        {vista === 'proyeccion' && <Proyeccion irARevision={irARevision} />}
       </main>
     </div>
   )

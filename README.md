@@ -5,9 +5,9 @@ suscripciones y cuotas, y proyecta el flujo del mes. **Corre entero en la máqui
 movimiento sale a internet.** Hasta el 12/09/2026 se llamó Libro Mayor Local.
 
 Estado: **fase 4 en curso.** Cinco meses reales cargados, de abril a agosto, y los cinco
-cuadran al centavo. API local y, en el navegador, reporte del mes, bandeja de revisión, corrección de decisiones y
-proyección del mes que viene.
-147 tests.
+cuadran al centavo. API local y, en el navegador, carga de resúmenes, reporte del mes, bandeja de revisión,
+corrección de decisiones y proyección del mes que viene.
+156 tests.
 Documentos: [FASE-0.md](FASE-0.md) · [FASE-1.md](FASE-1.md) · [FASE-2.md](FASE-2.md) · [MERCADO-PAGO.md](MERCADO-PAGO.md) · [FASE-3.md](FASE-3.md) · [FASE-4.md](FASE-4.md).
 
 ## Arrancar

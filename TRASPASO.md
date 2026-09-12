@@ -38,6 +38,7 @@ más abajo.
 | **4**, tercer incremento | Corregir una decisión desde la solapa Resueltos; cambiar la categoría reinicia las confirmaciones; `correcciones` guarda vía y estado anteriores (migración 003); `tools.curva` mide el acierto de la memoria | 122 tests. En la base real la memoria todavía no resolvió nada sola: el acierto se mide cuando entre un mes después de revisar | `FASE-4.md` |
 | **4**, cuarto incremento | Detector determinista de recurrentes fijos y proyección del mes siguiente en tres piezas: recurrentes, promedio del gasto variable clasificado, sin clasificar aparte. Solapa Proyección | Base real: 2 recurrentes fijos, 0 ingresos recurrentes, 90 movimientos por mes sin clasificar | `FASE-4.md` |
 | **4**, quinto incremento | Stack en contenedores (db, api, web) publicado sólo en 127.0.0.1, y tabla `corridas` para observar cada ingesta sin datos | 130 MiB en reposo entre los tres; 147 tests; el CI construye las imágenes | `FASE-4.md` |
+| **4**, sexto incremento | Solapa Cargar: el resumen se sube desde el navegador y se procesa en un hilo de la API, con progreso por SSE y la flota opcional limitada a ese resumen | Verificado con `demo` en el navegador y, con el modelo, a través de nginx; 156 tests | `FASE-4.md` |
 
 ### Decisiones que conviene conocer antes de tocar código
 
@@ -146,11 +147,12 @@ pasó a ser el sintético ("María Laura Pérez Gómez"): el nombre real del usu
   escribir esto quedaron corriendo, con la API sobre la base real. Si Docker está apagado,
   pedile al usuario que lo prenda: un `psycopg.connect` sin base puede quedar colgado en vez
   de fallar.
-- **Tests:** 147 pasan y 1 se saltea: el del PDF real, que corre con `CENTAVO_RESUMEN_REAL`
+- **Tests:** 156 pasan y 1 se saltea: el del PDF real, que corre con `CENTAVO_RESUMEN_REAL`
   apuntando al archivo. `npm run build` pasa.
-- **Esquema `demo`:** trae una devolución sintética unida a su pago (la agrega `tools.demo`,
-  no el PDF) y una decisión aplicada en la prueba de la interfaz. `python -m tools.demo` lo
-  rearma desde cero.
+- **Esquema `demo`:** además del resumen sintético con una devolución unida a su pago, que
+  agrega `tools.demo`, quedaron dos CSV sintéticos de las pruebas de la solapa Cargar: una
+  cuenta corriente de 45 movimientos sin clasificar y uno de 3 que clasificó la flota.
+  `python -m tools.demo` lo rearma desde cero.
 - **PDF reales:** fuera del repositorio; dónde están, en `privado/NOTAS.md`. La base ya no
   los necesita.
 - **Git:** rama `main`, con remoto `origin` en https://github.com/JuanPabloListte/centavo, que
@@ -177,10 +179,10 @@ pasó a ser el sintético ("María Laura Pérez Gómez"): el nombre real del usu
 | Memoria con embeddings en pgvector | Clave exacta por contraparte | Los nombres de personas se pisan; ver `FASE-3.md`. Los embeddings quedan, a lo sumo, como sugerencia |
 | Plantillas de banco aprendidas por el modelo | Perfiles deterministas (`Perfil`) | El PDF de Mercado Pago se resolvió por coordenadas, sin modelo |
 | Cuatro agentes | Dos con modelo, más analizador determinista y supervisor | Ver `FASE-2.md`. Suscripciones y cuotas siguen pendientes |
-| Celery + Redis | Ingesta sincrónica, por terminal | Sin modelo, un resumen tarda segundos. Si la carga pasa al navegador con la flota, que tarda minutos, ahí hace falta un proceso en segundo plano |
+| Celery + Redis | Un hilo de la API por carga, con progreso por SSE | Una persona y una carga por vez: no hacen falta dos servicios más. Ver `FASE-4.md` |
 | Tailwind | CSS propio, con tokens de tema claro y oscuro | No hizo falta |
 | OpenTelemetry + Langfuse | Tabla `corridas` en Postgres | Langfuse autohospedado suma cinco servicios; ver `FASE-4.md` |
-| SSE, contexto argentino | Pendiente | Sin orden fijo, al final |
+| Contexto argentino | Pendiente | Sin orden fijo, al final |
 | Tablas `merchants`, `subscriptions`, `installments`, `bank_layouts` y de trazas | No existen | Se crean cuando una tarea las necesite, con migración |
 
 **Automatizar la descarga.** El usuario no quiere bajar el resumen a mano todos los meses. Se
@@ -246,7 +248,7 @@ puntos. 8 tests en `tests/test_corridas.py`.
 
 ### Después, sin orden fijo
 
-- Cargar un PDF desde el navegador, con progreso por SSE.
+- Cancelar una carga en curso desde la interfaz.
 - Contexto argentino, para comparar meses: inflación y tipo de cambio. Se pueden bajar datos
   públicos; los movimientos nunca suben.
 - Volver a medir la flota de la fase 2 con las decisiones del usuario como etiquetas reales. Hoy
@@ -260,6 +262,12 @@ puntos. 8 tests en `tests/test_corridas.py`.
 
 ## Detalles conocidos
 
+- **Probar la solapa Cargar en el navegador.** El selector de archivos del sistema no se maneja
+  desde las herramientas: se arma el archivo dentro de la página con `DataTransfer`, se asigna
+  a `input.files` y se dispara `change`. Con un CSV sintético alcanza.
+- **El panel del navegador busca `.claude/launch.json` en la carpeta donde arrancó la sesión.**
+  Si arrancó en el Escritorio, hace falta una copia temporal ahí, con rutas absolutas y barras
+  hacia adelante. Se borra al terminar.
 - Para la base, 127.0.0.1 y no `localhost`: con Postgres publicado sólo en IPv4, `localhost`
   prueba primero `::1` y cada conexión espera a que venza. Ver `FASE-4.md`.
 - La bandeja muestra todas las contrapartes sin paginar: hoy, 166 tarjetas.
