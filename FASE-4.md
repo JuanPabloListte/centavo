@@ -1,11 +1,13 @@
 # Centavo — Fase 4
 
-**Estado: cuarto incremento terminado.** API local y, en el navegador con React + Vite, el
+**Estado: quinto incremento terminado.** API local y, en el navegador con React + Vite, el
 reporte del mes, la bandeja de revisión, la corrección de decisiones y la proyección del mes
 que viene. Cinco meses reales cargados, de abril a agosto, que cuadran al centavo, con cada
-devolución unida a su pago. `pytest` pasa 139; uno más corre sólo contra el resumen real.
+devolución unida a su pago. Todo corre también en contenedores, publicado sólo en 127.0.0.1,
+y cada ingesta deja una fila para observar el sistema. `pytest` pasa 147; uno más corre sólo
+contra el resumen real.
 
-Lo que falta de la fase —observabilidad y la app en contenedores— no depende de tu revisión.
+Las tareas de la fase están hechas. Lo que sigue, sin orden fijo, está al final.
 
 ---
 
@@ -19,6 +21,8 @@ Lo que falta de la fase —observabilidad y la app en contenedores— no depende
 | **Corregir una decisión** | `web/src/Resueltos.tsx` | Lo ya resuelto, por contraparte y con la vía; cambiar la categoría pisa lo anterior. |
 | **Proyección** | `api/app/recurrentes.py`, `web/src/Proyeccion.tsx` | Recurrentes fijos y proyección del mes siguiente, en piezas que se suman. |
 | **API local** | `api/app/main.py` | Lo que usan las pantallas. Escucha sólo en 127.0.0.1. |
+| **Contenedores** | `docker-compose.yml`, `api/Dockerfile`, `web/Dockerfile` | Postgres, API e interfaz compilada, todo en 127.0.0.1. |
+| **Corridas** | `api/app/corridas.py` | Una fila por ingesta: tiempos, vías y costo del modelo, sin datos. |
 
 Verificado en el navegador sobre el esquema `demo`: una decisión desde la bandeja (una
 transferencia enviada con 2 movimientos → *Pagos y Transferencias*) bajó el contador de
@@ -291,6 +295,94 @@ cuando el mes cierra.
 
 ---
 
+## Todo en contenedores
+
+`docker compose up -d --build` levanta tres servicios, y los tres se publican sólo en
+127.0.0.1:
+
+| Servicio | Imagen | En el host | Memoria en reposo, medida | Límite |
+|---|---|---|---|---|
+| `db` | pgvector/pgvector:pg16 | 127.0.0.1:5433 | 28 MiB | 512 MiB |
+| `api` | centavo-api, 350 MB | no se publica | 87 MiB | 512 MiB |
+| `web` | centavo-web, 102 MB | 127.0.0.1:8080 | 15 MiB | 64 MiB |
+
+Verificado con `netstat`: en el host sólo escuchan 127.0.0.1:5433 y 127.0.0.1:8080. Los
+límites suman 1,1 GB y lo medido en reposo, 130 MiB: entra de sobra junto a Ollama.
+
+**Las decisiones.**
+
+- **La API no se publica al host.** La interfaz la alcanza por la red interna de Compose,
+  con nginx pasándole `/api` como hacía el proxy de Vite. Así el 8000 y el 5173 quedan para
+  desarrollar: el stack y el desarrollo local conviven.
+- **Ollama queda en el host**, por la GPU. La API lo busca en `host.docker.internal:11434`.
+  Verificado desde adentro del contenedor: responde con la lista de modelos.
+- **Las migraciones corren al arrancar la API.** Son idempotentes: sobre una base al día no
+  cambian nada.
+- **La imagen de la API no tiene root ni datos.** Corre con un usuario sin privilegios, y
+  `.dockerignore` deja afuera `privado/`, `.env`, los tests y `.git`: un resumen real nunca
+  entra a una capa de la imagen. `privado/` se monta sólo lectura en `/privado`, para
+  `POST /api/ingest {"path": "/privado/..."}`.
+- **La interfaz del contenedor es la compilada**, servida por nginx. En la imagen final no
+  queda Node.
+- **Para probar sin datos reales**: `CENTAVO_DB_SCHEMA=demo docker compose up -d`. Así se
+  verificó: a través del 8080, la API respondió sobre el esquema demo, con 19 contrapartes
+  y 24 movimientos para revisar.
+
+**Un detalle que apareció al verificar.** Con Postgres publicado sólo en 127.0.0.1, conectarse
+por `localhost` se volvió lento: en Windows `localhost` resuelve primero a la dirección IPv6
+`::1`, donde nada escucha, y cada conexión esperaba a que ese intento venciera antes de probar
+127.0.0.1. Medido: 3 segundos por conexión con el límite que usan los tests, contra 0 por
+127.0.0.1; un comando que se conecta sin límite no terminó en un minuto. La URL por defecto
+de la base pasó a decir 127.0.0.1, en `app/store.py` y `.env.example`.
+
+El CI suma un paso que construye las dos imágenes.
+
+**Lo que no hace.** Los tests no corren en un contenedor: siguen en local y en el CI, contra
+Postgres. La API del contenedor no recarga el código al cambiarlo: para desarrollar, la local.
+
+---
+
+## Observabilidad: una tabla de corridas
+
+La especificación pedía OpenTelemetry con Langfuse autohospedado. **Se construyó otra cosa,
+más chica**, y la razón es de recursos. Autohospedar Langfuse, según su documentación, suma
+un contenedor web y un worker, un Postgres propio, ClickHouse, Redis o Valkey y un
+almacenamiento compatible con S3. La documentación no publica un mínimo de memoria; lo que
+sí está claro es que son cinco servicios más para una notebook de 16 GB que ya tiene
+cargado un modelo de 7B, para una persona que ingiere un resumen por mes.
+
+**Lo que hay.** Cada ingesta, por terminal o por `POST /api/ingest`, deja una fila en la
+tabla `corridas` (migración 004, `app/corridas.py`):
+
+| Columna | Qué guarda |
+|---|---|
+| `origen`, `resultado` | terminal o API; cuadrado, descuadrado, ya ingerido, superposición o error |
+| `milisegundos` | cuánto tardó la corrida entera |
+| `movimientos`, `por_via` | cuántos movimientos tiene el resumen y cuántos resolvió cada vía |
+| `desacuerdos` | cuántos quedaron a revisión porque los agentes discreparon |
+| `modelo`, `llamadas_modelo`, `tokens_*`, `segundos_modelo`, `reparaciones` | el costo del modelo, si hubo |
+| `error_tipo` | la clase del error, si falló |
+
+Se consulta con `python -m tools.corridas` o `GET /api/corridas`. Con eso se contesta con
+una consulta lo que contestaría un tablero de trazas: si el modelo se volvió más lento,
+cuántas reparaciones de JSON hacen falta, cuánto resuelve la memoria de un mes al siguiente.
+
+**Lo que no guarda, a propósito.** Descripciones, montos, nombres ni el texto de un error. Un
+error de parseo puede citar el renglón que no pudo leer, y eso es un dato del resumen: de un
+error queda sólo la clase. Hay un test que fija que las únicas columnas de texto son esas
+cuatro cortas y de valores fijos.
+
+**Un detalle que se corrigió de paso.** `POST /api/ingest` devolvía en `clasificacion` lo
+pendiente de todos los meses sumado, no el resumen que se acababa de cargar. Ahora cuenta
+sólo ese resumen, igual que `tools.ingerir`, con un test.
+
+**Lo que no hace.** No hay spans de OpenTelemetry: sin un colector donde mirarlos no aportan
+nada que la tabla no diga, y agregarlos después es envolver los mismos tres puntos
+(parseo, guardado y clasificación). No mide la clasificación que se hace fuera de una
+ingesta, como `tools.evaluar`, que ya deja su propio JSON en `tools/resultados/`.
+
+---
+
 ## Cómo se usa
 
 Con Docker corriendo, en dos terminales:
@@ -337,7 +429,8 @@ conexión.
 | POST | `/api/revision/decisiones` | `{clave, categoria}`: resuelve el grupo y lo guarda en memoria. 404 si la clave no tiene movimientos; 422 si la categoría no existe. |
 | GET | `/api/revision/resueltos` | Lo resuelto, por contraparte y categoría, con la vía. La misma decisión lo cambia. |
 | GET | `/api/proyeccion` | Recurrentes fijos y proyección del mes siguiente al último cargado, en piezas. |
-| POST | `/api/ingest` | `{path}`: lo mismo que `tools.ingerir`. 409 si ya estaba cargado o se superpone con otro. |
+| POST | `/api/ingest` | `{path}`: lo mismo que `tools.ingerir`, y `clasificacion` cuenta sólo ese resumen. 409 si ya estaba cargado o se superpone con otro. Deja una fila en `corridas`. |
+| GET | `/api/corridas` | Las últimas ingestas, con conteos. `?limite=` hasta 200. |
 
 Si Postgres no responde, cualquier ruta da 503 con un mensaje que dice qué revisar. Las
 rutas de la fase 0 (`/health`, `/ingest`) pasaron a `/api/...`.
@@ -395,4 +488,6 @@ sumando todos. `tools.curva` imprime conteos, nunca nombres ni montos.
    un bloque sin clasificar.
 2. **Con septiembre cargado después de revisar**: la curva de la memoria pasa a ser un
    acierto medido, y la proyección de septiembre se puede comparar contra lo que pasó.
-3. **Contenedores y observabilidad**: lo que queda de la fase.
+3. **Sin orden fijo**: cargar un PDF desde el navegador, comparar la proyección contra lo que
+   pasó, el contexto argentino para comparar meses y volver a medir la flota con tus
+   decisiones como etiquetas.

@@ -1,0 +1,10 @@
+# Lo que nunca entra a una imagen. privado/ tiene resúmenes reales y notas del
+# usuario; .env, credenciales.
+.git
+.env
+privado
+web
+**/__pycache__
+**/.pytest_cache
+api/tests
+api/tools/resultados

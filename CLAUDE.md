@@ -20,6 +20,10 @@ en `MERCADO-PAGO.md`.
   interfaz se prueba con el esquema `demo`, no con la base real.
 - Los PDF reales nunca van a `api/tests/fixtures/` ni a un repo: van en `privado/`, que está en
   `.gitignore`.
+- **El repositorio es público** (github.com/JuanPabloListte/centavo). Antes de cada push:
+  ningún nombre, monto ni dato de un movimiento real, ni nada personal del usuario, que va en
+  `privado/NOTAS.md`. Un ejemplo en la documentación se inventa, no se copia de la base. Cómo
+  verificarlo, en TRASPASO.md.
 - Si se usa la API de Mercado Pago, el token lo genera y lo guarda el usuario en `.env`. Nunca
   pasa por el chat ni por el código.
 
@@ -59,7 +63,7 @@ en `MERCADO-PAGO.md`.
   remoto que configuró el usuario, nunca forzado; no se crean otros remotos.
 - Documentación en castellano rioplatense, con el estilo de los `FASE-*.md`: cada decisión con la
   evidencia que la sostiene, los números sin inflar y lo que el sistema no hace, dicho.
-- **Antes de dar algo por terminado:** `pytest` en `api/` (hoy 139 pasan y 1 se saltea),
+- **Antes de dar algo por terminado:** `pytest` en `api/` (hoy 147 pasan y 1 se saltea),
   `npm run build` en `web/`, y la interfaz probada en el navegador con el esquema `demo`.
 - Si el usuario pide una explicación o dice "no ejecutes", no toques nada.
 
@@ -72,8 +76,10 @@ en `MERCADO-PAGO.md`.
 - Dentro de Postgres, el usuario y la base siguen siendo `libro` y `libro_mayor`, y el volumen de
   Docker `libro-mayor_pgdata`: quedaron de cuando el proyecto se llamaba Libro Mayor, y
   renombrarlos toca la base con datos. Ver TRASPASO.md.
-- Docker Desktop lo prende el usuario. Postgres sale con `docker compose up -d` desde esta
-  carpeta, en el puerto 5433.
+- Docker Desktop lo prende el usuario. `docker compose up -d` desde esta carpeta levanta
+  Postgres en 127.0.0.1:5433, la API y la interfaz compilada en http://127.0.0.1:8080. La API
+  del contenedor no se publica al host: no choca con la de desarrollo en el 8000. Para probar
+  el stack sin datos reales: `CENTAVO_DB_SCHEMA=demo docker compose up -d`.
 - Ollama con `qwen2.5:7b` y `llama3.2:3b`.
 - Notebook con RTX 3060 de 6 GB y 16 GB de RAM: cualquier servicio nuevo tiene que entrar en ese
   presupuesto.
@@ -90,6 +96,7 @@ pytest
 python -m tools.migrar                        # migraciones, idempotentes
 python -m tools.ingerir ruta/al/resumen.pdf   # parsea, verifica, guarda y clasifica sin modelo
 python -m tools.curva                         # memoria entre meses; sólo conteos
+python -m tools.corridas                      # últimas ingestas: tiempos, vías y costo; sólo conteos
 python -m tools.revisar                       # revisión por terminal
 python -m tools.demo                          # rearma el esquema demo con datos sintéticos
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000   # API sobre la base real
@@ -120,9 +127,11 @@ api/app/
   memoria.py           memoria, decisiones, grupos pendientes y resueltos, precisión de la memoria
   reporte.py           reporte del mes
   recurrentes.py       recurrentes fijos por contraparte y proyección del mes siguiente, en piezas
+  corridas.py          una fila por ingesta: tiempos, vías y costo del modelo, sin datos
   main.py, demo.py     API local; la misma API sobre el esquema demo
 api/tools/             un comando por archivo, más evaluar.py (benchmark de las fases 1 y 2)
 api/tests/             conftest.py (fixture db) y un test_*.py por tema
 web/src/               App.tsx (solapas), Revision.tsx, Resueltos.tsx, Reporte.tsx, Proyeccion.tsx, api.ts, tipos.ts, formato.ts
 db/                    schema.sql y migraciones/
+api/Dockerfile, web/Dockerfile, web/nginx.conf, docker-compose.yml   el stack en contenedores
 ```

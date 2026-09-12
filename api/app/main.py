@@ -18,11 +18,12 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import psycopg
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from .agents.patrones import es_memorizable, nombre_legible
 from .clasificar import cargar_categorias
+from .corridas import Corrida, conteo_del_resumen, ultimas
 from .memoria import (
     aplicar_decision,
     clasificar_pendientes,
@@ -212,26 +213,54 @@ class IngestPedido(BaseModel):
 
 @app.post("/api/ingest")
 def ingest(pedido: IngestPedido, conn: psycopg.Connection = Depends(get_conn)) -> dict:
+    """Lo mismo que tools.ingerir, sin modelo. Cada salida deja una fila en
+    `corridas`, y `clasificacion` cuenta sólo este resumen, no lo pendiente de
+    los otros meses."""
     path = Path(pedido.path)
     if not path.exists():
         raise HTTPException(404, f"No existe: {path}")
 
+    corrida = Corrida("api")
     try:
         resumen, resultado = procesar(path)
     except ValueError as exc:
         # Un archivo que no se puede parsear es un 422, no un 500: el problema
         # está en el archivo o en el perfil, no en el servidor.
+        corrida.guardar(conn, "error", error=exc)
         raise HTTPException(422, str(exc)) from exc
 
     try:
         statement_id = guardar(resumen, resultado, conn=conn)
-    except (YaIngerido, SuperposicionParcial) as exc:
+    except YaIngerido as exc:
+        corrida.guardar(conn, "ya_ingerido", statement_id=exc.statement_id)
+        raise HTTPException(409, str(exc)) from exc
+    except SuperposicionParcial as exc:
+        corrida.guardar(conn, "superposicion")
         raise HTTPException(409, str(exc)) from exc
 
+    if resultado.cuadra:
+        clasificar_pendientes(conn)
+    numero = corrida.guardar(
+        conn, "cuadrado" if resultado.cuadra else "descuadrado", statement_id=statement_id
+    )
     return {
         "statement_id": statement_id,
         "cuadra": resultado.cuadra,
         "detalle": resultado.explicar(),
-        "clasificacion": clasificar_pendientes(conn) if resultado.cuadra else {},
+        "clasificacion": conteo_del_resumen(conn, statement_id) if resultado.cuadra else {},
         "pendientes": _pendientes(conn),
+        "corrida": numero,
     }
+
+
+@app.get("/api/corridas")
+def corridas(
+    limite: int = Query(20, ge=1, le=200),
+    conn: psycopg.Connection = Depends(get_conn),
+) -> list[dict]:
+    """Las últimas ingestas: cuánto tardaron, cómo terminaron y cuánto costó el
+    modelo. Sólo conteos: la tabla no tiene dónde guardar un movimiento."""
+    return [
+        c | {"empezo_en": c["empezo_en"].isoformat(), "segundos_modelo": str(c["segundos_modelo"])}
+        for c in ultimas(conn, limite)
+    ]

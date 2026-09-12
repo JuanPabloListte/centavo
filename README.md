@@ -7,7 +7,7 @@ movimiento sale a internet.** Hasta el 12/09/2026 se llamó Libro Mayor Local.
 Estado: **fase 4 en curso.** Cinco meses reales cargados, de abril a agosto, y los cinco
 cuadran al centavo. API local y, en el navegador, reporte del mes, bandeja de revisión, corrección de decisiones y
 proyección del mes que viene.
-139 tests.
+147 tests.
 Documentos: [FASE-0.md](FASE-0.md) · [FASE-1.md](FASE-1.md) · [FASE-2.md](FASE-2.md) · [MERCADO-PAGO.md](MERCADO-PAGO.md) · [FASE-3.md](FASE-3.md) · [FASE-4.md](FASE-4.md).
 
 ## Arrancar
@@ -40,9 +40,16 @@ tus datos: `python -m tools.demo` y `app.demo:app` en lugar de `app.main:app`
 Los resúmenes reales van en `privado/`, que está en `.gitignore`: tienen CVU, CUIT
 y nombres de terceros. `tests/fixtures/` es sólo para sintéticos.
 
-Postgres corre en Docker; el código Python corre local en un venv. La app todavía no se
-containeriza: iterar contra un venv es mucho más rápido que reconstruir una imagen en cada
-cambio.
+### Todo en contenedores
+
+```bash
+docker compose up -d --build   # Postgres, la API y la interfaz en http://127.0.0.1:8080
+```
+
+Todo se publica sólo en 127.0.0.1. Ollama queda en el host, por la GPU, y la API lo alcanza
+en `host.docker.internal`. Para desarrollar conviene la API y Vite en local contra el mismo
+Postgres: iterar contra el código es más rápido que reconstruir una imagen en cada cambio, y
+los puertos no chocan. Detalle y consumo medido en [FASE-4.md](FASE-4.md).
 
 ## El principio rector
 
@@ -69,4 +76,4 @@ Nunca se depuran las dos cosas a la vez.
 ## Stack
 
 Python · FastAPI · Pydantic · PostgreSQL 16 (imagen con pgvector) · Ollama con qwen2.5:7b,
-local · React + Vite + TypeScript · Docker Compose
+local · React + Vite + TypeScript · nginx · Docker Compose

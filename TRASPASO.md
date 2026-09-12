@@ -37,6 +37,7 @@ más abajo.
 | **4**, segundo incremento | Cada devolución unida a su pago por ID de operación (`devuelve_a`, migración 002): toma su clave, hereda su categoría y resta del gasto | Base real: 5 unidas, 0 sin pago; de 169 a 166 contrapartes; los cinco reportes siguen cuadrando | `FASE-4.md` |
 | **4**, tercer incremento | Corregir una decisión desde la solapa Resueltos; cambiar la categoría reinicia las confirmaciones; `correcciones` guarda vía y estado anteriores (migración 003); `tools.curva` mide el acierto de la memoria | 122 tests. En la base real la memoria todavía no resolvió nada sola: el acierto se mide cuando entre un mes después de revisar | `FASE-4.md` |
 | **4**, cuarto incremento | Detector determinista de recurrentes fijos y proyección del mes siguiente en tres piezas: recurrentes, promedio del gasto variable clasificado, sin clasificar aparte. Solapa Proyección | Base real: 2 recurrentes fijos, 0 ingresos recurrentes, 90 movimientos por mes sin clasificar | `FASE-4.md` |
+| **4**, quinto incremento | Stack en contenedores (db, api, web) publicado sólo en 127.0.0.1, y tabla `corridas` para observar cada ingesta sin datos | 130 MiB en reposo entre los tres; 147 tests; el CI construye las imágenes | `FASE-4.md` |
 
 ### Decisiones que conviene conocer antes de tocar código
 
@@ -88,6 +89,8 @@ más abajo.
 - Migración `002_devoluciones.sql`: aplicada. 5 devoluciones unidas a su pago, 0 sin pago
   cargado.
 - Migración `003_correcciones_con_via.sql`: aplicada.
+- Migración `004_corridas.sql`: aplicada. Todavía no hay corridas: la primera será la próxima
+  ingesta.
 - Ningún reporte muestra gastos todavía, porque lo único resuelto son internos y rendimientos.
 
 **Curva de la memoria** (`tools.curva`): qué parte de lo que queda por revisar en cada mes tiene
@@ -139,22 +142,27 @@ pasó a ser el sintético ("María Laura Pérez Gómez"): el nombre real del usu
 
 ### Entorno y archivos
 
-- **Docker:** al escribir esto, el contenedor de Postgres de este proyecto estaba **apagado**;
-  sólo corrían los de ScalistAI. Pedile al usuario que lo levante (`docker compose up -d` desde
-  esta carpeta) antes de cualquier cosa que use la base. Un `psycopg.connect` sin base puede
-  quedar colgado en vez de fallar.
-- **Tests:** 139 pasan y 1 se saltea: el del PDF real, que corre con `CENTAVO_RESUMEN_REAL`
+- **Docker:** `docker compose up -d` levanta `centavo-db`, `centavo-api` y `centavo-web`. Al
+  escribir esto quedaron corriendo, con la API sobre la base real. Si Docker está apagado,
+  pedile al usuario que lo prenda: un `psycopg.connect` sin base puede quedar colgado en vez
+  de fallar.
+- **Tests:** 147 pasan y 1 se saltea: el del PDF real, que corre con `CENTAVO_RESUMEN_REAL`
   apuntando al archivo. `npm run build` pasa.
 - **Esquema `demo`:** trae una devolución sintética unida a su pago (la agrega `tools.demo`,
   no el PDF) y una decisión aplicada en la prueba de la interfaz. `python -m tools.demo` lo
   rearma desde cero.
 - **PDF reales:** fuera del repositorio; dónde están, en `privado/NOTAS.md`. La base ya no
   los necesita.
-- **Git:** repositorio local, rama `main`. El usuario pidió subirlo a un remoto y falta que
-  exista: no hay `gh` instalado ni credenciales guardadas, así que el repo lo crea el usuario
-  en GitHub y después va `git remote add origin <url>` y `git push -u origin main`. Cada tarea
-  terminada se commitea; nunca push forzado ni otros remotos. `.github/workflows/ci.yml` corre
-  recién con el remoto.
+- **Git:** rama `main`, con remoto `origin` en https://github.com/JuanPabloListte/centavo, que
+  es **público**. El push usa la cuenta que el usuario guardó en Git Credential Manager; no
+  hay `gh`. Cada tarea terminada se commitea y se sube, nunca con push forzado. El CI corre en
+  cada push y se puede consultar sin autenticarse en la API de GitHub.
+- **Nada privado en el repo.** Antes del primer push se reescribió la historia local, que
+  todavía no estaba publicada, para sacar dos cosas: un ejemplo de `FASE-3.md` con nombres de
+  personas que aparecen en 9 movimientos reales, y lo personal del usuario, que pasó a
+  `privado/NOTAS.md`. Antes de cada push, revisá que no entren nombres, montos ni datos del
+  usuario: un cruce de las palabras de las contrapartes reales contra los archivos
+  versionados, que imprima sólo archivo y línea, lo encuentra.
 - **Comandos largos del agente.** En esta máquina, un comando de shell de más de unos 8 KB se
   corta antes de correr y falla con un error de comillas. Un archivo grande se escribe en
   partes de menos de 6 KB y se juntan con `cat`.
@@ -171,7 +179,8 @@ pasó a ser el sintético ("María Laura Pérez Gómez"): el nombre real del usu
 | Cuatro agentes | Dos con modelo, más analizador determinista y supervisor | Ver `FASE-2.md`. Suscripciones y cuotas siguen pendientes |
 | Celery + Redis | Ingesta sincrónica, por terminal | Sin modelo, un resumen tarda segundos. Si la carga pasa al navegador con la flota, que tarda minutos, ahí hace falta un proceso en segundo plano |
 | Tailwind | CSS propio, con tokens de tema claro y oscuro | No hizo falta |
-| OpenTelemetry + Langfuse, SSE, cuotas, contexto argentino, GitHub Actions | Pendiente | Resto de la fase 4 |
+| OpenTelemetry + Langfuse | Tabla `corridas` en Postgres | Langfuse autohospedado suma cinco servicios; ver `FASE-4.md` |
+| SSE, contexto argentino | Pendiente | Sin orden fijo, al final |
 | Tablas `merchants`, `subscriptions`, `installments`, `bank_layouts` y de trazas | No existen | Se crean cuando una tarea las necesite, con migración |
 
 **Automatizar la descarga.** El usuario no quiere bajar el resumen a mano todos los meses. Se
@@ -225,19 +234,15 @@ resolvió sola y cuánto corregiste; `tools.curva` lo imprime. La pregunta abier
 con la regla del proyecto: una decisión del usuario pisa a la evidencia, con aviso en la
 solapa y traza en `correcciones`. 7 tests en `tests/test_resueltos.py`.
 
-### Tarea 4: contenedores y observabilidad
+### Tarea 4: contenedores y observabilidad — hecha el 12/09/2026
 
-- **Compose con `api` y `web`** además de `db`.
-  - Ollama queda en el host, por la GPU: desde el contenedor, `host.docker.internal:11434`.
-  - Los puertos se publican sólo en `127.0.0.1`.
-  - Límites de memoria pensados para 16 GB con Ollama cargado.
-- **Observabilidad.** La especificación pide OpenTelemetry con Langfuse autohospedado. Antes de
-  elegirlo, verificá sus requisitos actuales: autohospedado suma varios servicios, y puede no
-  entrar en la RAM junto a Ollama. Alternativa liviana: una tabla de corridas en Postgres (vías,
-  desacuerdos, tokens y latencia por resumen) más spans de OpenTelemetry. Decidilo con el
-  usuario.
-- **Aceptación:** `docker compose up` levanta todo, los tests siguen corriendo en local y nada
-  escucha fuera de `127.0.0.1`.
+Está en `FASE-4.md`, "Todo en contenedores" y "Observabilidad". Compose con `db`, `api` y
+`web`: la API no se publica al host, la web queda en 127.0.0.1:8080 con nginx y Ollama
+sigue en el host. Medido en reposo: 130 MiB entre los tres. Para observabilidad se eligió
+la alternativa liviana que sugería este documento: la tabla `corridas` (migración 004,
+`app/corridas.py`, `tools.corridas`, `GET /api/corridas`), sin spans de OpenTelemetry. El
+usuario no llegó a elegir: si quiere Langfuse u OpenTelemetry, se agrega sobre los mismos
+puntos. 8 tests en `tests/test_corridas.py`.
 
 ### Después, sin orden fijo
 
@@ -255,8 +260,8 @@ solapa y traza en `correcciones`. 7 tests en `tests/test_resueltos.py`.
 
 ## Detalles conocidos
 
-- `POST /api/ingest` devuelve `clasificacion` sumando lo pendiente de todos los meses.
-  `tools.ingerir` ya se corrigió con `conteo_del_resumen`; la API no.
+- Para la base, 127.0.0.1 y no `localhost`: con Postgres publicado sólo en IPv4, `localhost`
+  prueba primero `::1` y cada conexión espera a que venza. Ver `FASE-4.md`.
 - La bandeja muestra todas las contrapartes sin paginar: hoy, 166 tarjetas.
 - Los grupos sin contraparte comparten el `aria-label` "Categoría para Sin contraparte".
 - En las herramientas del navegador, `read_page` nombra el `select` por la opción elegida, no
@@ -273,7 +278,6 @@ solapa y traza en `correcciones`. 7 tests en `tests/test_resueltos.py`.
 2. A principios de octubre, generar el resumen de septiembre completo (del 1 al 30), cargarlo y
    correr `tools.curva`.
 3. Levantar Docker cuando se vaya a trabajar.
-4. Crear el repositorio remoto en GitHub y pasar la URL, para el primer push.
 
 ---
 

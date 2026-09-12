@@ -1,6 +1,7 @@
 # Lo mismo que se corre en local antes de dar algo por terminado: pytest en api/
 # contra un Postgres con pgvector, y npm run build en web/. Sin Ollama: los tests
 # no llaman al modelo. Sin datos reales: los fixtures son sintéticos.
+# Y que las imágenes de docker-compose.yml se construyan.
 name: ci
 
 on: [push, pull_request]
@@ -43,3 +44,9 @@ jobs:
         working-directory: web
       - run: npm run build
         working-directory: web
+
+  imagenes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build

@@ -48,9 +48,12 @@ from .models import CierrePorSaldos, CierrePorTotal, Resumen, ResultadoCuadratur
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
+# 127.0.0.1 y no localhost: en Windows, localhost resuelve primero a ::1, y con
+# Postgres publicado sólo en 127.0.0.1 cada conexión esperaba a que venciera ese
+# intento antes de probar IPv4. Ver FASE-4.md, "Todo en contenedores".
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://libro:libro@localhost:5433/libro_mayor",
+    "postgresql://libro:libro@127.0.0.1:5433/libro_mayor",
 )
 
 

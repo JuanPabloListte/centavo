@@ -7,6 +7,8 @@ Parsea, verifica la compuerta, guarda y clasifica lo que se resuelve sin
 modelo: la memoria y la evidencia. Con --con-modelo, lo que queda pasa por la
 flota (dos agentes + supervisor), que en una notebook tarda minutos.
 
+Deja una fila en `corridas` con cómo terminó y cuánto costó (`tools.corridas`).
+
 Imprime conteos, nunca movimientos: el resumen tiene datos de terceros.
 """
 
@@ -18,6 +20,7 @@ from pathlib import Path
 import psycopg
 
 from app.clasificar import cargar_categorias, construir
+from app.corridas import Corrida, conteo_del_resumen
 from app.memoria import cargar_memoria, clasificar_pendientes, grupos_pendientes
 from app.pipeline import procesar
 from app.store import SuperposicionParcial, YaIngerido, conectar, guardar
@@ -30,29 +33,6 @@ VIAS = {
     "needs_review": "a revisión",
     "sin_procesar": "sin resolver (para revisar)",
 }
-
-
-def conteo_del_resumen(conn: psycopg.Connection, statement_id: int) -> list[tuple[str, int]]:
-    """Cómo quedó clasificado ESTE resumen.
-
-    No sale de lo que devuelve `clasificar_pendientes`: esa función procesa todo
-    lo pendiente, y lo pendiente de los meses anteriores entra de nuevo en la
-    cuenta.
-    """
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT CASE WHEN estado_clasificacion = 'resuelto' THEN via
-                        ELSE estado_clasificacion END,
-                   count(*)
-            FROM transactions
-            WHERE statement_id = %s
-            GROUP BY 1
-            ORDER BY 2 DESC
-            """,
-            (statement_id,),
-        )
-        return cur.fetchall()
 
 
 def devoluciones_unidas(conn: psycopg.Connection, statement_id: int) -> int:
@@ -71,24 +51,32 @@ def main() -> int:
                     help="clasificar con la flota lo que no resuelven memoria ni evidencia")
     args = ap.parse_args()
 
-    resumen, resultado = procesar(Path(args.archivo))
-    print(f"  {resumen.banco} · {resumen.periodo_desde} a {resumen.periodo_hasta}")
-    print(f"  {resultado.explicar()}")
-
+    corrida = Corrida("terminal")
     with conectar() as conn:
+        try:
+            resumen, resultado = procesar(Path(args.archivo))
+        except Exception as exc:
+            corrida.guardar(conn, "error", error=exc)
+            raise
+        print(f"  {resumen.banco} · {resumen.periodo_desde} a {resumen.periodo_hasta}")
+        print(f"  {resultado.explicar()}")
+
+        ya_estaba = False
         try:
             statement_id = guardar(resumen, resultado, conn=conn)
             print(f"  guardado como resumen {statement_id}")
             if unidas := devoluciones_unidas(conn, statement_id):
                 print(f"  {unidas} devolución(es) unida(s) a su pago")
         except YaIngerido as exc:
-            statement_id = exc.statement_id
+            statement_id, ya_estaba = exc.statement_id, True
             print(f"  {exc}: no se guarda de nuevo")
         except SuperposicionParcial as exc:
+            corrida.guardar(conn, "superposicion")
             print(f"  ! {exc}")
             return 1
 
         if not resultado.cuadra:
+            corrida.guardar(conn, "descuadrado", statement_id=statement_id)
             print("  ! no cuadra: queda guardado como descuadrado y no se clasifica")
             return 1
 
@@ -99,10 +87,20 @@ def main() -> int:
                 categorias=cargar_categorias(conn),
                 reglas=cargar_memoria(conn),
             )
+        cliente = getattr(clasificador, "cliente", None)
 
-        clasificar_pendientes(conn, clasificador)
+        try:
+            clasificar_pendientes(conn, clasificador)
+        except Exception as exc:
+            corrida.guardar(conn, "error", statement_id=statement_id, cliente=cliente, error=exc)
+            raise
+        numero = corrida.guardar(
+            conn, "ya_ingerido" if ya_estaba else "cuadrado",
+            statement_id=statement_id, cliente=cliente,
+        )
+
         print("  este resumen:")
-        for via, n in conteo_del_resumen(conn, statement_id):
+        for via, n in conteo_del_resumen(conn, statement_id).items():
             print(f"    {n:4}  {VIAS.get(via, via)}")
 
         grupos = grupos_pendientes(conn)
@@ -110,6 +108,7 @@ def main() -> int:
         print(f"  para revisar, sumando todos los resúmenes: {pendientes} movimientos en "
               f"{len(grupos)} contrapartes"
               f"{'  ->  python -m tools.revisar' if grupos else ''}")
+        print(f"  corrida {numero} registrada  ->  python -m tools.corridas")
     return 0
 
 

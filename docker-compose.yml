@@ -2,6 +2,9 @@
 # que Compose buscara otro volumen y arrancara con una base vacía.
 name: centavo
 
+# Todo se publica sólo en 127.0.0.1: nada queda expuesto a la red local.
+# Ollama no va en un contenedor: corre en el host, con la GPU.
+
 services:
   db:
     # pgvector viene incluido: no se usa todavía, pero tenerlo ahora evita
@@ -15,7 +18,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-libro}
       POSTGRES_DB: ${POSTGRES_DB:-libro_mayor}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      # Para los tests y las herramientas que corren en local.
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       # todo lo que esté acá corre una sola vez, al crear el volumen
@@ -25,11 +29,51 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-    # La notebook tiene 16 GB y Postgres no es el protagonista.
     deploy:
       resources:
         limits:
           memory: 512M
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    image: centavo-api
+    container_name: centavo-api
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-libro}:${POSTGRES_PASSWORD:-libro}@db:5432/${POSTGRES_DB:-libro_mayor}
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
+      CENTAVO_MODELO: ${CENTAVO_MODELO:-qwen2.5:7b}
+      # Vacío, la base real. Con CENTAVO_DB_SCHEMA=demo, el esquema de prueba.
+      CENTAVO_DB_SCHEMA: ${CENTAVO_DB_SCHEMA:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Los resúmenes reales, sólo lectura: POST /api/ingest {"path": "/privado/..."}.
+      - ./privado:/privado:ro
+    # Sin ports: al host no se publica. La web la alcanza por la red interna.
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  web:
+    build: ./web
+    image: centavo-web
+    container_name: centavo-web
+    ports:
+      # 8080 y no 5173: así no choca con `npm run dev` mientras se desarrolla.
+      - "127.0.0.1:${CENTAVO_WEB_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 64M
 
 volumes:
   pgdata:
