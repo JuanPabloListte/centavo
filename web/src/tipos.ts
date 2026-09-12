@@ -83,3 +83,49 @@ export type Reporte = {
   devoluciones: number
   por_categoria: LineaCategoria[]
 }
+
+export type GrupoResuelto = Grupo & {
+  categoria: string
+  /** Cómo se resolvió la mayoría del grupo: regla, evidencia, consenso o modelo. */
+  via: string
+}
+
+export type Resueltos = {
+  total_grupos: number
+  total_movimientos: number
+  grupos: GrupoResuelto[]
+}
+
+export type Recurrente = {
+  clave: string
+  tipo: string
+  nombre: string
+  categoria: string | null
+  meses: number
+  desde: string
+  dia_esperado: number
+  monto_esperado: string
+  tendencia: string | null
+}
+
+export type Proyeccion = {
+  mes_objetivo: string | null
+  ultimo_mes: string | null
+  meses_base: string[]
+  recurrentes: Recurrente[]
+  variable_por_categoria: { categoria: string; promedio: string; meses_con_datos: number }[]
+  sin_clasificar: { promedio: string; movimientos_por_mes: number } | null
+  totales: {
+    recurrentes_gastos: string
+    recurrentes_ingresos: string
+    variable_gastos: string
+    sin_clasificar_gastos: string
+    gastos_proyectados: string
+  } | null
+  criterios: {
+    meses_minimos: number
+    dias_tolerancia: number
+    salto_maximo: string
+    meses_promedio: number
+  }
+}

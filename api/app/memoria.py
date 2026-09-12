@@ -12,6 +12,10 @@ Una devolución unida a su pago (`devoluciones.py`) tiene la clave del pago, as�
 que cae en su grupo y una decisión resuelve las dos. Si el pago ya está
 resuelto, hereda su categoría; si no, espera. El modelo no la ve nunca.
 
+Y dos lecturas de lo resuelto: `grupos_resueltos`, para volver a abrir una
+decisión desde la bandeja, y `precision_de_la_memoria`, que cuenta cuánto de lo
+que la memoria resolvió sola corregiste después.
+
 Todo trabaja sólo sobre resúmenes con estado 'cuadrado'. Un resumen que no pasó
 la compuerta no se clasifica ni se corrige: sus movimientos no son de fiar.
 """
@@ -79,8 +83,12 @@ def aplicar_decision(conn: psycopg.Connection, clave: str, categoria: str) -> in
 
     Una decisión tuya es absoluta: pisa lo que haya decidido la evidencia o el
     modelo. Decidir de nuevo lo mismo no cambia movimientos, pero cuenta como
-    una confirmación más. Una clave sin contraparte se decide pero no se
-    guarda en memoria: no identifica a nadie.
+    una confirmación más; cambiar la categoría reinicia el conteo, porque una
+    contraparte recién cambiada no está confirmada. Una clave sin contraparte
+    se decide pero no se guarda en memoria: no identifica a nadie.
+
+    Cada corrección guarda cómo estaba el movimiento antes: categoría, vía y
+    estado. De ahí sale la precisión de la memoria.
     """
     try:
         with conn.cursor() as cur:
@@ -93,7 +101,11 @@ def aplicar_decision(conn: psycopg.Connection, clave: str, categoria: str) -> in
                     VALUES (%(clave)s, %(categoria)s)
                     ON CONFLICT (clave) DO UPDATE
                        SET categoria_id   = EXCLUDED.categoria_id,
-                           confirmaciones = memoria.confirmaciones + 1,
+                           confirmaciones = CASE
+                               WHEN memoria.categoria_id = EXCLUDED.categoria_id
+                               THEN memoria.confirmaciones + 1
+                               ELSE 1
+                           END,
                            actualizada_en = now()
                     """,
                     params,
@@ -102,8 +114,10 @@ def aplicar_decision(conn: psycopg.Connection, clave: str, categoria: str) -> in
             cur.execute(
                 f"""
                 INSERT INTO correcciones
-                    (transaction_id, clave, categoria_anterior_id, categoria_nueva_id)
-                SELECT t.id, t.clave, t.categoria_id, %(categoria)s
+                    (transaction_id, clave, categoria_anterior_id, categoria_nueva_id,
+                     via_anterior, estado_anterior)
+                SELECT t.id, t.clave, t.categoria_id, %(categoria)s,
+                       t.via, t.estado_clasificacion
                 FROM transactions t
                 WHERE EXISTS (SELECT 1 {_ALCANCE})
                 """,
@@ -236,3 +250,91 @@ def grupos_pendientes(conn: psycopg.Connection) -> list[dict]:
             }
             for clave, cantidad, total, desde, hasta, ejemplos, devoluciones in cur.fetchall()
         ]
+
+
+def grupos_resueltos(conn: psycopg.Connection) -> list[dict]:
+    """Lo resuelto, agrupado por clave y categoría, de mayor a menor cantidad.
+    Es lo que se puede volver a abrir: una decisión sobre la clave pisa lo que
+    haya, venga de la memoria, de la evidencia o del modelo.
+
+    `via` es la más frecuente del grupo: un pago resuelto por consenso y su
+    devolución, que hereda por evidencia, comparten grupo.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT t.clave,
+                   c.nombre,
+                   mode() WITHIN GROUP (ORDER BY t.via),
+                   count(*),
+                   sum(t.monto),
+                   min(t.fecha),
+                   max(t.fecha),
+                   array_agg(t.descripcion_cruda
+                             ORDER BY (t.devuelve_a IS NOT NULL), t.fecha, t.id),
+                   count(*) FILTER (WHERE t.devuelve_a IS NOT NULL)
+            FROM transactions t
+            JOIN statements s ON s.id = t.statement_id
+            JOIN categories c ON c.id = t.categoria_id
+            WHERE s.estado = 'cuadrado'
+              AND t.estado_clasificacion = 'resuelto'
+            GROUP BY t.clave, c.nombre
+            ORDER BY count(*) DESC, abs(sum(t.monto)) DESC, t.clave
+            """
+        )
+        return [
+            {
+                "clave": clave,
+                "categoria": categoria,
+                "via": via,
+                "cantidad": cantidad,
+                "total": total,
+                "desde": desde,
+                "hasta": hasta,
+                "ejemplos": list(dict.fromkeys(ejemplos))[:3],
+                "devoluciones": devoluciones,
+            }
+            for clave, categoria, via, cantidad, total, desde, hasta, ejemplos, devoluciones
+            in cur.fetchall()
+        ]
+
+
+def precision_de_la_memoria(conn: psycopg.Connection) -> dict:
+    """Cuánto acierta la memoria, medido con tus correcciones.
+
+    Un movimiento lo resolvió la memoria SOLA si tiene vía 'regla' y ninguna
+    decisión directa tuya encima: ninguna fila en `correcciones`. Si después lo
+    corregís, esa primera corrección lleva `via_anterior = 'regla'`, y es un
+    error de la memoria. Una segunda corrección sobre el mismo movimiento es un
+    cambio de opinión tuyo, no de la memoria, y no cuenta.
+
+    `acierto` es None hasta que la memoria haya resuelto algo sola.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+              (SELECT count(*)
+                 FROM transactions t
+                 JOIN statements s ON s.id = t.statement_id
+                WHERE s.estado = 'cuadrado'
+                  AND t.estado_clasificacion = 'resuelto'
+                  AND t.via = 'regla'
+                  AND NOT EXISTS (SELECT 1 FROM correcciones c
+                                   WHERE c.transaction_id = t.id)),
+              (SELECT count(*)
+                 FROM correcciones c
+                WHERE c.via_anterior = 'regla'
+                  AND c.estado_anterior = 'resuelto'
+                  AND NOT EXISTS (SELECT 1 FROM correcciones previa
+                                   WHERE previa.transaction_id = c.transaction_id
+                                     AND previa.id < c.id))
+            """
+        )
+        sola, corregidos = cur.fetchone()
+    total = sola + corregidos
+    return {
+        "resueltos_por_memoria": sola,
+        "corregidos": corregidos,
+        "acierto": None if total == 0 else sola / total,
+    }

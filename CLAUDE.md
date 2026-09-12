@@ -55,11 +55,11 @@ en `MERCADO-PAGO.md`.
 
 ### Forma de trabajo
 
-- **Hay git local desde el 12/09/2026, sin remoto.** Commits, push y repos remotos, sólo con
-  pedido explícito del usuario.
+- **Git:** rama `main`. Se commitea cada tarea terminada, con los tests pasando. Push sólo al
+  remoto que configuró el usuario, nunca forzado; no se crean otros remotos.
 - Documentación en castellano rioplatense, con el estilo de los `FASE-*.md`: cada decisión con la
   evidencia que la sostiene, los números sin inflar y lo que el sistema no hace, dicho.
-- **Antes de dar algo por terminado:** `pytest` en `api/` (hoy 115 pasan y 1 se saltea),
+- **Antes de dar algo por terminado:** `pytest` en `api/` (hoy 139 pasan y 1 se saltea),
   `npm run build` en `web/`, y la interfaz probada en el navegador con el esquema `demo`.
 - Si el usuario pide una explicación o dice "no ejecutes", no toques nada.
 
@@ -117,11 +117,12 @@ api/app/
   supervisor.py        arbitraje por reglas
   clasificar.py        clasificador solo y flota
   llm.py               cliente de Ollama, con loop de reparación de JSON
-  memoria.py           memoria, decisiones, pendientes y grupos para revisar
+  memoria.py           memoria, decisiones, grupos pendientes y resueltos, precisión de la memoria
   reporte.py           reporte del mes
+  recurrentes.py       recurrentes fijos por contraparte y proyección del mes siguiente, en piezas
   main.py, demo.py     API local; la misma API sobre el esquema demo
 api/tools/             un comando por archivo, más evaluar.py (benchmark de las fases 1 y 2)
 api/tests/             conftest.py (fixture db) y un test_*.py por tema
-web/src/               App.tsx (solapas), Revision.tsx, Reporte.tsx, api.ts, tipos.ts, formato.ts
+web/src/               App.tsx (solapas), Revision.tsx, Resueltos.tsx, Reporte.tsx, Proyeccion.tsx, api.ts, tipos.ts, formato.ts
 db/                    schema.sql y migraciones/
 ```

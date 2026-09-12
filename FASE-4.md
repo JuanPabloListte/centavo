@@ -1,12 +1,11 @@
 # Centavo — Fase 4
 
-**Estado: segundo incremento terminado.** API local, reporte del mes y bandeja de revisión
-en el navegador, con React + Vite; cinco meses reales cargados, y cada devolución unida a su
-pago. Abril a agosto están en la base y los cinco cuadran al centavo. `pytest` pasa 115; uno
-más corre sólo contra el resumen real.
+**Estado: cuarto incremento terminado.** API local y, en el navegador con React + Vite, el
+reporte del mes, la bandeja de revisión, la corrección de decisiones y la proyección del mes
+que viene. Cinco meses reales cargados, de abril a agosto, que cuadran al centavo, con cada
+devolución unida a su pago. `pytest` pasa 139; uno más corre sólo contra el resumen real.
 
-Lo que falta de la fase —suscripciones y cuotas en el tiempo, proyección del mes,
-observabilidad, la app en contenedores— se apoya en esos meses y en tu revisión.
+Lo que falta de la fase —observabilidad y la app en contenedores— no depende de tu revisión.
 
 ---
 
@@ -17,7 +16,9 @@ observabilidad, la app en contenedores— se apoya en esos meses y en tu revisi�
 | **Reporte del mes** | `api/app/reporte.py` | Ingresos, gastos, movimientos internos y lo que falta clasificar, por categoría. Cuadra al centavo con el resumen. |
 | **Bandeja de revisión** | `web/src/Revision.tsx` | Lo mismo que `tools.revisar`, en el navegador: una decisión por contraparte. |
 | **Reporte en pantalla** | `web/src/Reporte.tsx` | Sello de cuadratura, totales, cobertura y la tabla por categoría. |
-| **API local** | `api/app/main.py` | Lo que usan las dos pantallas. Escucha sólo en 127.0.0.1. |
+| **Corregir una decisión** | `web/src/Resueltos.tsx` | Lo ya resuelto, por contraparte y con la vía; cambiar la categoría pisa lo anterior. |
+| **Proyección** | `api/app/recurrentes.py`, `web/src/Proyeccion.tsx` | Recurrentes fijos y proyección del mes siguiente, en piezas que se suman. |
+| **API local** | `api/app/main.py` | Lo que usan las pantallas. Escucha sólo en 127.0.0.1. |
 
 Verificado en el navegador sobre el esquema `demo`: una decisión desde la bandeja (una
 transferencia enviada con 2 movimientos → *Pagos y Transferencias*) bajó el contador de
@@ -197,6 +198,99 @@ había visto en un mes anterior.
 
 ---
 
+## Corregir una decisión
+
+Un grupo resuelto salía de la bandeja y no había forma de volver a abrirlo. Ahora hay una
+solapa **Resueltos**: lo que ya tiene categoría, por contraparte, con la vía por la que se
+resolvió, búsqueda y cambio de categoría. Usa la misma decisión que la bandeja: pisa lo que
+haya, venga de la memoria, de la evidencia o del modelo, y queda en memoria.
+
+**Pisar la evidencia está permitido.** Es la regla del proyecto: una decisión tuya es
+absoluta. La solapa avisa cuando el grupo lo resolvió la evidencia del texto del resumen,
+porque ahí lo más probable es que la evidencia tenga razón, y la corrección queda registrada
+con lo que había antes.
+
+**Dos cosas que no estaban bien.**
+
+- Cambiar la categoría de una contraparte sumaba una confirmación en la memoria, como si
+  la hubieras ratificado. Ahora reinicia el conteo: una contraparte recién cambiada no está
+  confirmada ocho veces.
+- `correcciones` guardaba la categoría anterior pero no cómo se había llegado a ella.
+  Migración 003: guarda también la vía y el estado anteriores. Las filas viejas quedan en
+  NULL; en la base real no había ninguna.
+
+**Con eso la curva deja de ser un techo.** Un movimiento lo resolvió la memoria sola si
+tiene vía `regla` y ninguna decisión directa tuya encima. Si después lo corregís, esa
+primera corrección es un error de la memoria; una segunda corrección sobre el mismo
+movimiento es un cambio de opinión tuyo y no cuenta. `tools.curva` lo imprime al final:
+cuántos resolvió sola, cuántos corregiste y el acierto. Hoy, en la base real, es 0 y 0:
+todavía no revisaste, así que la memoria no resolvió nada sola. El número aparece cuando
+cargues un mes después de revisar.
+
+Verificado en el navegador con el esquema `demo`: la solapa lista los cuatro grupos que
+resolvió la evidencia, y al cambiar uno lo muestra con la categoría nueva y la vía "por tu
+decisión".
+
+---
+
+## Recurrentes fijos y proyección del mes
+
+Es la parte central del producto, y sale de aritmética: el modelo no participa.
+
+**Medir primero.** Sobre la base real, sin lo que resuelve la evidencia, sin claves sin
+contraparte y con las devoluciones ya unidas a su pago:
+
+| | |
+|---|---|
+| Contrapartes que aparecen en 3 meses o más | 27 |
+| Con exactamente un movimiento por mes | 3 |
+| En meses seguidos | 17 |
+| Con menos del 5% de variación en el monto | 3 |
+| Con saltos mes a mes del 30% o más, en la mediana | 16 |
+| Movimientos con cuotas en el texto | 0 |
+| "Pago de suscripción" | 10, en 2 contrapartes |
+
+Casi todo lo que se repite es variable: SUBE, supermercado, transferencias. Lo fijo es
+poco y sube todos los meses, así que una tolerancia fija sobre el monto no sirve. Lo que
+distingue un servicio de otra cosa no es que cambie: es que no salte.
+
+**El detector** (`app/recurrentes.py`) mira cada contraparte en los últimos meses seguidos,
+hasta el último cargado inclusive, y la llama recurrente fija si aparece en 3 meses o más,
+una sola vez por mes, siempre con el mismo signo, en días parecidos (5 de diferencia como
+mucho) y sin saltos de más del 30% de un mes al siguiente. Un servicio que dejó de aparecer
+el último mes no se proyecta. No mira la categoría: una transferencia mensual a una
+persona, como un alquiler, es recurrente aunque nadie la haya clasificado. Precisión antes
+que recall: sobre la base real detecta 2, una suscripción con 4 meses de racha y un pago
+con 3, y ningún ingreso. Los tests lo prueban con series sintéticas: estable, con aumentos,
+irregular, de una sola vez, con un salto, con el día corrido y con dos por mes.
+
+**La proyección** es del mes siguiente al último cargado, en tres piezas que se suman:
+
+1. Los recurrentes fijos, con el último monto visto. No depende de que revises.
+2. El promedio de los últimos 3 meses del gasto variable ya clasificado, por categoría,
+   restando las devoluciones. Depende de tu revisión.
+3. Lo sin clasificar, promedio mensual, aparte. Hoy son 90 movimientos por mes: casi toda
+   la proyección real está ahí hasta que revises.
+
+`GET /api/proyeccion` devuelve las piezas, los meses que usó y los criterios; la solapa
+**Proyección** las muestra. Hay un test que fija que el total se reconstruye sumando.
+
+**Lo que se decidió sin preguntar, y por qué.** Las tres preguntas abiertas del traspaso:
+
+- *Transferencias recurrentes a personas*: entran, porque el detector no mira el tipo. En
+  la tabla se ven con su tipo.
+- *Hasta cuándo proyectar*: el mes siguiente al último cargado.
+- *De dónde sale el mes en curso*: de ningún lado, todavía. Un resumen parcial de mitad de
+  mes choca con el completo que llega después, porque un resumen que comparte movimientos
+  con otro se rechaza entero. Soportarlo es reemplazar un resumen por otro, y esa es una
+  decisión aparte.
+
+**Lo que no hace.** No detecta cuotas: en cinco meses reales no hay una sola descripción
+con cuotas. No guarda las proyecciones, así que todavía no compara proyectado contra real
+cuando el mes cierra.
+
+---
+
 ## Cómo se usa
 
 Con Docker corriendo, en dos terminales:
@@ -241,6 +335,8 @@ conexión.
 | GET | `/api/categorias` | Las 18, marcando cuáles son internas y cuáles decide sólo la evidencia. |
 | GET | `/api/revision/grupos` | Lo pendiente, agrupado por contraparte. |
 | POST | `/api/revision/decisiones` | `{clave, categoria}`: resuelve el grupo y lo guarda en memoria. 404 si la clave no tiene movimientos; 422 si la categoría no existe. |
+| GET | `/api/revision/resueltos` | Lo resuelto, por contraparte y categoría, con la vía. La misma decisión lo cambia. |
+| GET | `/api/proyeccion` | Recurrentes fijos y proyección del mes siguiente al último cargado, en piezas. |
 | POST | `/api/ingest` | `{path}`: lo mismo que `tools.ingerir`. 409 si ya estaba cargado o se superpone con otro. |
 
 Si Postgres no responde, cualquier ruta da 503 con un mensaje que dice qué revisar. Las
@@ -281,8 +377,10 @@ sumando todos. `tools.curva` imprime conteos, nunca nombres ni montos.
 
 ## Lo que todavía no hace
 
-- **Corregir una decisión ya tomada.** Un grupo resuelto sale de la bandeja, y no hay
-  pantalla para volver a abrirlo.
+- **Comparar proyectado contra real.** No guarda las proyecciones: cuando cierre un mes, no
+  dice cuánto le erró.
+- **Cargar el mes en curso a medias.** Un resumen parcial choca con el completo que llega
+  después.
 - **Reportar por mes calendario.** El reporte es por resumen. Si cada PDF cubre un mes, es
   el reporte del mes.
 - **Cargar un PDF desde el navegador.** La ingesta sigue siendo por terminal, o por
@@ -293,8 +391,8 @@ sumando todos. `tools.curva` imprime conteos, nunca nombres ni montos.
 ## Qué sigue
 
 1. **Vos**: revisar en la bandeja. Con las primeras 20 decisiones quedan resueltos 308 de
-   los 536 movimientos, y los reportes empiezan a mostrar gastos.
-2. **Corregir una decisión desde la bandeja.** Es lo que falta para medir cuánto acierta la
-   memoria cuando una contraparte se repite: la curva de hoy es un techo.
-3. **Con cinco meses**: suscripciones y cuotas detectadas en el tiempo, y la proyección del
-   mes en curso.
+   los 536 movimientos, los reportes empiezan a mostrar gastos y la proyección deja de ser
+   un bloque sin clasificar.
+2. **Con septiembre cargado después de revisar**: la curva de la memoria pasa a ser un
+   acierto medido, y la proyección de septiembre se puede comparar contra lo que pasó.
+3. **Contenedores y observabilidad**: lo que queda de la fase.

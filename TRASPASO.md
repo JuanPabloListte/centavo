@@ -35,6 +35,8 @@ más abajo.
 | **3** | Memoria por clave exacta de contraparte y revisión por grupos | Agosto real: 1,89 movimientos por decisión | `FASE-3.md` |
 | **4**, primer incremento | API local, reporte del mes, bandeja de revisión en React + Vite, identidad del movimiento, primera migración, cinco meses cargados | Los cinco cuadran; desde junio, 3 de cada 4 movimientos por revisar tienen una contraparte ya vista | `FASE-4.md` |
 | **4**, segundo incremento | Cada devolución unida a su pago por ID de operación (`devuelve_a`, migración 002): toma su clave, hereda su categoría y resta del gasto | Base real: 5 unidas, 0 sin pago; de 169 a 166 contrapartes; los cinco reportes siguen cuadrando | `FASE-4.md` |
+| **4**, tercer incremento | Corregir una decisión desde la solapa Resueltos; cambiar la categoría reinicia las confirmaciones; `correcciones` guarda vía y estado anteriores (migración 003); `tools.curva` mide el acierto de la memoria | 122 tests. En la base real la memoria todavía no resolvió nada sola: el acierto se mide cuando entre un mes después de revisar | `FASE-4.md` |
+| **4**, cuarto incremento | Detector determinista de recurrentes fijos y proyección del mes siguiente en tres piezas: recurrentes, promedio del gasto variable clasificado, sin clasificar aparte. Solapa Proyección | Base real: 2 recurrentes fijos, 0 ingresos recurrentes, 90 movimientos por mes sin clasificar | `FASE-4.md` |
 
 ### Decisiones que conviene conocer antes de tocar código
 
@@ -85,6 +87,7 @@ más abajo.
 - Migración `001_identidad_del_movimiento.sql`: aplicada.
 - Migración `002_devoluciones.sql`: aplicada. 5 devoluciones unidas a su pago, 0 sin pago
   cargado.
+- Migración `003_correcciones_con_via.sql`: aplicada.
 - Ningún reporte muestra gastos todavía, porque lo único resuelto son internos y rendimientos.
 
 **Curva de la memoria** (`tools.curva`): qué parte de lo que queda por revisar en cada mes tiene
@@ -130,9 +133,9 @@ pasó a ser el sintético ("María Laura Pérez Gómez"): el nombre real del usu
 - **El volumen de Docker** `libro-mayor_pgdata`, con los cinco meses. `docker-compose.yml` lo
   apunta por nombre y fija `name: centavo` como proyecto, así que ni el volumen ni el
   contenedor `centavo-db` dependen del nombre de la carpeta. Con eso no se copió nada.
-- **La carpeta** sigue siendo `libro-mayor`: renombrarla desde adentro de la sesión la rompe.
-  Lo hace el usuario: cerrar la sesión, renombrar a `centavo`, abrir el proyecto de nuevo. La
-  memoria del agente ya está copiada a la clave de la carpeta nueva.
+- **La carpeta** ya se llama `centavo`. La renombró el usuario con la sesión movida a otro
+  directorio: Windows no deja renombrar el directorio de trabajo de un proceso, y los de la
+  sesión arrancan ahí.
 
 ### Entorno y archivos
 
@@ -140,16 +143,18 @@ pasó a ser el sintético ("María Laura Pérez Gómez"): el nombre real del usu
   sólo corrían los de ScalistAI. Pedile al usuario que lo levante (`docker compose up -d` desde
   esta carpeta) antes de cualquier cosa que use la base. Un `psycopg.connect` sin base puede
   quedar colgado en vez de fallar.
-- **Tests:** 115 pasan y 1 se saltea: el del PDF real, que corre con `CENTAVO_RESUMEN_REAL`
+- **Tests:** 139 pasan y 1 se saltea: el del PDF real, que corre con `CENTAVO_RESUMEN_REAL`
   apuntando al archivo. `npm run build` pasa.
 - **Esquema `demo`:** trae una devolución sintética unida a su pago (la agrega `tools.demo`,
   no el PDF) y una decisión aplicada en la prueba de la interfaz. `python -m tools.demo` lo
   rearma desde cero.
 - **PDF reales:** fuera del repositorio; dónde están, en `privado/NOTAS.md`. La base ya no
   los necesita.
-- **Git:** repositorio local iniciado el 12/09/2026, rama `main`, sin remoto. Commits, push y
-  remotos, sólo con pedido explícito del usuario. `.github/workflows/ci.yml` existe pero no
-  corrió nunca: se prueba recién cuando haya remoto.
+- **Git:** repositorio local, rama `main`. El usuario pidió subirlo a un remoto y falta que
+  exista: no hay `gh` instalado ni credenciales guardadas, así que el repo lo crea el usuario
+  en GitHub y después va `git remote add origin <url>` y `git push -u origin main`. Cada tarea
+  terminada se commitea; nunca push forzado ni otros remotos. `.github/workflows/ci.yml` corre
+  recién con el remoto.
 - **Comandos largos del agente.** En esta máquina, un comando de shell de más de unos 8 KB se
   corta antes de correr y falla con un error de comillas. Un archivo grande se escribe en
   partes de menos de 6 KB y se juntan con `cat`.
@@ -198,57 +203,27 @@ la clave del pago, hereda su categoría si el pago está resuelto, y en el repor
 gasto. Verificado en la base real con conteos: 5 unidas, 0 sin pago, de 169 a 166
 contrapartes, los cinco reportes cuadran. 17 tests en `tests/test_devoluciones.py`.
 
-### Tarea 2: gastos recurrentes y proyección del mes
+### Tarea 2: gastos recurrentes y proyección del mes — hecha el 12/09/2026
 
-Es la parte central del producto. La especificación pide que la proyección salga de aritmética
-(suscripciones activas, cuotas pendientes, promedio por rubro) y que el modelo, como mucho,
-redacte la explicación de un número ya calculado.
+Está en `FASE-4.md`, "Recurrentes fijos y proyección del mes". Se midió primero (los
+conteos están ahí) y de eso salieron los criterios: 3 meses seguidos hasta el último cargado,
+un movimiento por mes, mismo signo, días con 5 de diferencia como mucho, saltos de hasta 30%
+mes a mes. `app/recurrentes.py`, `GET /api/proyeccion`, solapa Proyección, 17 tests en
+`tests/test_recurrentes.py`. Las tres preguntas para el usuario se resolvieron con supuestos,
+dichos en el documento: las transferencias recurrentes a personas entran; se proyecta el mes
+siguiente al último cargado; el mes en curso a medias no se soporta todavía. Si el usuario
+quiere otra cosa, son constantes al principio del módulo y una decisión de diseño para el
+resumen parcial.
 
-1. **Medir primero, con conteos.**
-   - Cuántas claves aparecen en 3, 4 y 5 meses, por tipo.
-   - Qué tan estable es el monto y el día del mes.
-   - Si el resumen de cuenta muestra cuotas: contá cuántas descripciones las mencionan.
-2. **Detector determinista por clave.**
-   - Criterios: meses consecutivos, monto parecido, día del mes parecido.
-   - Excluí internos, rendimientos y lo que resuelve la evidencia. Una devolución unida a su
-     pago (`devuelve_a`) resta de ese pago: para medir recurrencia, netearla.
-   - Ojo con la inflación: en Argentina un servicio sube mes a mes, así que una tolerancia fija
-     sobre el monto no alcanza. Probá tolerancia relativa o tendencia, y fijala con los datos.
-   - **Precisión antes que recall:** detectar un recurrente que no existe molesta más que no
-     detectar uno.
-3. **Proyección, en dos niveles.**
-   - Recurrentes esperados que todavía no aparecieron: no depende de que el usuario revise.
-   - Promedio del gasto variable por categoría: depende de la revisión, y hay que decir cuánto
-     está sin clasificar.
-4. **API y una solapa nueva** con lo detectado y la proyección. Si hace falta persistir,
-   migración con tabla propia.
+### Tarea 3: corregir una decisión desde la bandeja — hecha el 12/09/2026
 
-**Para consultar con el usuario:**
-- Qué hacer con transferencias recurrentes a personas, como un alquiler.
-- Hasta cuándo proyectar: fin del mes en curso o el mes siguiente.
-- De dónde sale el mes en curso: un resumen parcial generado a mitad de mes.
-
-**Aceptación.**
-- Tests con series sintéticas: mensual estable, con aumentos, irregular y de una sola vez.
-- Sobre datos reales, sólo conteos.
-- Toda cifra proyectada se puede reconstruir sumando.
-
-### Tarea 3: corregir una decisión desde la bandeja
-
-**Qué hay.** `aplicar_decision(conn, clave, categoria)` ya aplica a todos los movimientos con
-esa clave, pisa lo resuelto, actualiza la memoria y registra cada cambio en `correcciones`, con
-la categoría anterior. Falta:
-
-- Un endpoint que liste lo resuelto por contraparte: clave, nombre, categoría, vía y cantidad.
-- Una vista "Resueltos" en la web, con búsqueda y cambio de categoría.
-- **Un detalle a corregir, con test:** hoy cambiar la categoría suma una confirmación en
-  `memoria.confirmaciones`. Cambiarla debería reiniciar el conteo, no sumar.
-
-**Por qué importa.** Las correcciones sobre movimientos que resolvió la memoria (`via = 'regla'`)
-son el error de la memoria. Con eso la curva deja de ser un techo y pasa a medir cuánto acierta.
-
-**Para consultar:** si se permite pisar lo que decidió la evidencia (una reserva, una
-transferencia propia), y con qué aviso.
+Está en `FASE-4.md`, "Corregir una decisión". Solapa **Resueltos** con `GET
+/api/revision/resueltos`, búsqueda y cambio de categoría con la misma decisión de la bandeja.
+Las confirmaciones se reinician al cambiar de categoría. `correcciones` guarda vía y estado
+anteriores (migración 003) y `app.memoria.precision_de_la_memoria` cuenta lo que la memoria
+resolvió sola y cuánto corregiste; `tools.curva` lo imprime. La pregunta abierta se resolvió
+con la regla del proyecto: una decisión del usuario pisa a la evidencia, con aviso en la
+solapa y traza en `correcciones`. 7 tests en `tests/test_resueltos.py`.
 
 ### Tarea 4: contenedores y observabilidad
 
@@ -272,6 +247,8 @@ transferencia propia), y con qué aviso.
 - Volver a medir la flota de la fase 2 con las decisiones del usuario como etiquetas reales. Hoy
   su benchmark es sintético, de 26 casos.
 - Detector de duplicados.
+- Guardar cada proyección y compararla contra lo real cuando el mes cierra.
+- Cargar el mes en curso a medias: reemplazar un resumen parcial por el completo.
 - Automatizar la descarga del resumen, confirmándolo antes con el usuario.
 
 ---
@@ -296,6 +273,7 @@ transferencia propia), y con qué aviso.
 2. A principios de octubre, generar el resumen de septiembre completo (del 1 al 30), cargarlo y
    correr `tools.curva`.
 3. Levantar Docker cuando se vaya a trabajar.
+4. Crear el repositorio remoto en GitHub y pasar la URL, para el primer push.
 
 ---
 

@@ -2,7 +2,9 @@ import type {
   Categoria,
   DecisionRespuesta,
   Grupos,
+  Proyeccion,
   Reporte,
+  Resueltos,
   ResumenItem,
 } from './tipos'
 
@@ -47,6 +49,7 @@ async function pedir<T>(ruta: string, init?: RequestInit): Promise<T> {
 export const api = {
   grupos: () => pedir<Grupos>('/api/revision/grupos'),
   categorias: () => pedir<Categoria[]>('/api/categorias'),
+  resueltos: () => pedir<Resueltos>('/api/revision/resueltos'),
   decidir: (clave: string, categoria: string) =>
     pedir<DecisionRespuesta>('/api/revision/decisiones', {
       method: 'POST',
@@ -54,6 +57,7 @@ export const api = {
     }),
   resumenes: () => pedir<ResumenItem[]>('/api/resumenes'),
   reporte: (id: number) => pedir<Reporte>(`/api/resumenes/${id}/reporte`),
+  proyeccion: () => pedir<Proyeccion>('/api/proyeccion'),
 }
 
 export function mensajeDe(error: unknown): string {

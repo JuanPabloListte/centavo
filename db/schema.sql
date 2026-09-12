@@ -233,3 +233,16 @@ ALTER TABLE transactions
     ADD COLUMN devuelve_a BIGINT REFERENCES transactions(id) ON DELETE SET NULL;
 
 CREATE INDEX transactions_devuelve_a_idx ON transactions (devuelve_a);
+
+
+-- ===========================================================================
+-- FASE 4 — corregir una decisión
+-- ===========================================================================
+
+-- Qué había antes de cada corrección: la vía y el estado, además de la
+-- categoría. Es lo que permite medir el acierto de la memoria: una corrección
+-- sobre un movimiento que la memoria resolvió sola es un error de la memoria.
+-- Para una base creada antes de este cambio: db/migraciones/003_correcciones_con_via.sql
+ALTER TABLE correcciones
+    ADD COLUMN via_anterior    TEXT,
+    ADD COLUMN estado_anterior TEXT;

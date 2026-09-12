@@ -11,6 +11,9 @@ calcula por fechas de período. Los movimientos que resuelve la evidencia no
 cuentan, porque para esos la memoria no hace falta. Las claves sin contraparte
 cuentan en el total pero nunca como cubiertas: no se aprenden.
 
+Al final, cuánto acierta la memoria: de lo que resolvió sola, cuánto corregiste
+después. Es la curva real, y recién tiene sentido cuando hay correcciones.
+
 Imprime conteos, nunca nombres ni montos.
 """
 
@@ -19,6 +22,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from app.agents.patrones import es_memorizable
+from app.memoria import precision_de_la_memoria
 from app.store import conectar
 
 
@@ -62,6 +66,15 @@ def main() -> int:
     if len(orden) == 1:
         print("\nCon un solo resumen no hay curva: el primero siempre da 0%, porque no hay "
               "meses anteriores de donde aprender. Cargá otro mes con tools.ingerir.")
+
+    with conectar() as conn:
+        p = precision_de_la_memoria(conn)
+    print(f"\nLa memoria resolvió sola {p['resueltos_por_memoria']} movimientos y corregiste "
+          f"{p['corregidos']} de esos", end="")
+    if p["acierto"] is None:
+        print(": todavía no hay con qué medir el acierto.")
+    else:
+        print(f": acierta el {p['acierto']:.0%}.")
     return 0
 
 

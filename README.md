@@ -5,8 +5,9 @@ suscripciones y cuotas, y proyecta el flujo del mes. **Corre entero en la máqui
 movimiento sale a internet.** Hasta el 12/09/2026 se llamó Libro Mayor Local.
 
 Estado: **fase 4 en curso.** Cinco meses reales cargados, de abril a agosto, y los cinco
-cuadran al centavo. API local, reporte del mes y bandeja de revisión en el navegador.
-115 tests.
+cuadran al centavo. API local y, en el navegador, reporte del mes, bandeja de revisión, corrección de decisiones y
+proyección del mes que viene.
+139 tests.
 Documentos: [FASE-0.md](FASE-0.md) · [FASE-1.md](FASE-1.md) · [FASE-2.md](FASE-2.md) · [MERCADO-PAGO.md](MERCADO-PAGO.md) · [FASE-3.md](FASE-3.md) · [FASE-4.md](FASE-4.md).
 
 ## Arrancar
@@ -63,7 +64,7 @@ Nunca se depuran las dos cosas a la vez.
 | **2** ✅ | Dos agentes + evidencia determinista + supervisor | El desacuerdo predice el error 10× mejor que la confianza |
 | **2½** ✅ | Parser del resumen de Mercado Pago, por coordenadas | Resumen real: 131 movimientos, 0 eslabones rotos, 25 resueltos sin modelo |
 | **3** ✅ | Memoria por contraparte + revisión por grupos | Resumen real: 1,89 movimientos por decisión; 46% de la 2ª quincena sin modelo |
-| **4** en curso | Reporte del mes y bandeja en React + Vite; después proyecciones y observabilidad | 5 meses reales, los 5 cuadran; cada devolución unida a su pago. Desde junio, 3 de cada 4 movimientos por revisar tienen una contraparte ya vista |
+| **4** en curso | Reporte, bandeja, corrección de decisiones y proyección del mes en React + Vite; después observabilidad y contenedores | 5 meses reales, los 5 cuadran; cada devolución unida a su pago. Desde junio, 3 de cada 4 movimientos por revisar tienen una contraparte ya vista |
 
 ## Stack
 

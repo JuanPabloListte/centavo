@@ -38,3 +38,17 @@ export const NOMBRE_TIPO: Record<string, string> = {
   PAGO: 'Pago',
   COMERCIO: 'Comercio',
 }
+
+export const NOMBRE_VIA: Record<string, string> = {
+  regla: 'por tu decisión',
+  evidencia: 'por evidencia en el texto',
+  consenso: 'por consenso de los agentes',
+  modelo: 'por el modelo',
+  desacuerdo: 'en desacuerdo',
+}
+
+/** "2026-09" -> "septiembre de 2026". */
+export function mesLargo(anioMes: string): string {
+  const [anio, mes] = anioMes.split('-').map(Number)
+  return new Date(anio, mes - 1, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+}

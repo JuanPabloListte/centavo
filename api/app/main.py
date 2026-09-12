@@ -23,8 +23,14 @@ from pydantic import BaseModel, Field
 
 from .agents.patrones import es_memorizable, nombre_legible
 from .clasificar import cargar_categorias
-from .memoria import aplicar_decision, clasificar_pendientes, grupos_pendientes
+from .memoria import (
+    aplicar_decision,
+    clasificar_pendientes,
+    grupos_pendientes,
+    grupos_resueltos,
+)
 from .pipeline import procesar
+from .recurrentes import proyeccion
 from .reporte import (
     CATEGORIAS_INTERNAS,
     ResumenDescuadrado,
@@ -108,32 +114,47 @@ def categorias(conn: psycopg.Connection = Depends(get_conn)) -> list[dict]:
     ]
 
 
+def _grupo_json(g: dict) -> dict:
+    tipo, contraparte = g["clave"].split("|", 1)
+    return {
+        "clave": g["clave"],
+        "tipo": tipo,
+        # La clave, normalizada para comparar; `nombre`, como lo imprime el
+        # resumen, para mostrar.
+        "contraparte": contraparte,
+        "nombre": nombre_legible(g["ejemplos"][0]) if g["ejemplos"] else contraparte,
+        "cantidad": g["cantidad"],
+        "devoluciones": g["devoluciones"],
+        "total": str(g["total"]),
+        "desde": g["desde"].isoformat(),
+        "hasta": g["hasta"].isoformat(),
+        "ejemplos": g["ejemplos"],
+        "memorizable": es_memorizable(g["clave"]),
+    }
+
+
+def _lista(grupos: list[dict]) -> dict:
+    return {
+        "total_grupos": len(grupos),
+        "total_movimientos": sum(g["cantidad"] for g in grupos),
+        "grupos": grupos,
+    }
+
+
 @app.get("/api/revision/grupos")
 def revision_grupos(conn: psycopg.Connection = Depends(get_conn)) -> dict:
-    grupos = grupos_pendientes(conn)
-    salida = []
-    for g in grupos:
-        tipo, contraparte = g["clave"].split("|", 1)
-        salida.append({
-            "clave": g["clave"],
-            "tipo": tipo,
-            # La clave, normalizada para comparar; `nombre`, como lo imprime el
-            # resumen, para mostrar.
-            "contraparte": contraparte,
-            "nombre": nombre_legible(g["ejemplos"][0]) if g["ejemplos"] else contraparte,
-            "cantidad": g["cantidad"],
-            "devoluciones": g["devoluciones"],
-            "total": str(g["total"]),
-            "desde": g["desde"].isoformat(),
-            "hasta": g["hasta"].isoformat(),
-            "ejemplos": g["ejemplos"],
-            "memorizable": es_memorizable(g["clave"]),
-        })
-    return {
-        "total_grupos": len(salida),
-        "total_movimientos": sum(g["cantidad"] for g in salida),
-        "grupos": salida,
-    }
+    return _lista([_grupo_json(g) for g in grupos_pendientes(conn)])
+
+
+@app.get("/api/revision/resueltos")
+def revision_resueltos(conn: psycopg.Connection = Depends(get_conn)) -> dict:
+    """Lo ya resuelto, por contraparte y categoría, para corregirlo con la misma
+    decisión que la bandeja. Una decisión tuya pisa lo que haya: memoria,
+    evidencia o modelo."""
+    return _lista([
+        _grupo_json(g) | {"categoria": g["categoria"], "via": g["via"]}
+        for g in grupos_resueltos(conn)
+    ])
 
 
 class DecisionPedido(BaseModel):
@@ -176,6 +197,13 @@ def reporte(statement_id: int, conn: psycopg.Connection = Depends(get_conn)) -> 
         raise HTTPException(404, f"No existe el resumen {statement_id}.") from exc
     except ResumenDescuadrado as exc:
         raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/api/proyeccion")
+def proyeccion_del_mes(conn: psycopg.Connection = Depends(get_conn)) -> dict:
+    """Recurrentes fijos y proyección del mes siguiente al último cargado. Es
+    aritmética sobre lo cargado, en piezas que se pueden sumar."""
+    return proyeccion(conn)
 
 
 class IngestPedido(BaseModel):

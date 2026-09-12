@@ -1,8 +1,17 @@
 import { useState } from 'react'
+import Proyeccion from './Proyeccion'
 import Reporte from './Reporte'
+import Resueltos from './Resueltos'
 import Revision from './Revision'
 
-type Vista = 'revision' | 'reporte'
+type Vista = 'revision' | 'resueltos' | 'reporte' | 'proyeccion'
+
+const SOLAPAS: { vista: Vista; titulo: string }[] = [
+  { vista: 'revision', titulo: 'Revisión' },
+  { vista: 'resueltos', titulo: 'Resueltos' },
+  { vista: 'reporte', titulo: 'Reporte del mes' },
+  { vista: 'proyeccion', titulo: 'Proyección' },
+]
 
 export default function App() {
   const [vista, setVista] = useState<Vista>('revision')
@@ -15,31 +24,25 @@ export default function App() {
           <span className="marca-nota">local · nada sale de esta máquina</span>
         </div>
         <nav className="pestanas" aria-label="Secciones">
-          <button
-            type="button"
-            className={vista === 'revision' ? 'activa' : ''}
-            aria-current={vista === 'revision' ? 'page' : undefined}
-            onClick={() => setVista('revision')}
-          >
-            Revisión
-          </button>
-          <button
-            type="button"
-            className={vista === 'reporte' ? 'activa' : ''}
-            aria-current={vista === 'reporte' ? 'page' : undefined}
-            onClick={() => setVista('reporte')}
-          >
-            Reporte del mes
-          </button>
+          {SOLAPAS.map((s) => (
+            <button
+              key={s.vista}
+              type="button"
+              className={vista === s.vista ? 'activa' : ''}
+              aria-current={vista === s.vista ? 'page' : undefined}
+              onClick={() => setVista(s.vista)}
+            >
+              {s.titulo}
+            </button>
+          ))}
         </nav>
       </header>
 
       <main className="contenido">
-        {vista === 'revision' ? (
-          <Revision />
-        ) : (
-          <Reporte irARevision={() => setVista('revision')} />
-        )}
+        {vista === 'revision' && <Revision />}
+        {vista === 'resueltos' && <Resueltos />}
+        {vista === 'reporte' && <Reporte irARevision={() => setVista('revision')} />}
+        {vista === 'proyeccion' && <Proyeccion irARevision={() => setVista('revision')} />}
       </main>
     </div>
   )
