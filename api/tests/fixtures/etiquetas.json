@@ -1,0 +1,106 @@
+[
+  {
+    "descripcion": "AUTOPISTA AUSOL TELEPEAJE",
+    "categoria": "Transporte"
+  },
+  {
+    "descripcion": "AYSA SERVICIOS",
+    "categoria": "Servicios"
+  },
+  {
+    "descripcion": "CABIFY ARG",
+    "categoria": "Transporte"
+  },
+  {
+    "descripcion": "CLARO AR PREPAGO",
+    "categoria": "Telefonía e Internet"
+  },
+  {
+    "descripcion": "COTO CICSA 0034",
+    "categoria": "Supermercado y Almacén"
+  },
+  {
+    "descripcion": "DECATHLON ARG",
+    "categoria": "Indumentaria"
+  },
+  {
+    "descripcion": "DLO*SPOTIFY",
+    "categoria": "Suscripciones"
+  },
+  {
+    "descripcion": "EDESUR SA",
+    "categoria": "Servicios"
+  },
+  {
+    "descripcion": "GARBARINO 12 CUOTAS",
+    "categoria": "Hogar y Electro"
+  },
+  {
+    "descripcion": "LIBRERIA YENNY",
+    "categoria": "Educación"
+  },
+  {
+    "descripcion": "MERPAGO*KIOSCO LA ESQ",
+    "categoria": "Supermercado y Almacén"
+  },
+  {
+    "descripcion": "MERPAGO*LA ESQUINA",
+    "categoria": "Supermercado y Almacén"
+  },
+  {
+    "descripcion": "MUSIMUNDO CUOTA 7/12",
+    "categoria": "Hogar y Electro"
+  },
+  {
+    "descripcion": "MUSIMUNDO ONLINE",
+    "categoria": "Hogar y Electro"
+  },
+  {
+    "descripcion": "NETFLIX.COM",
+    "categoria": "Suscripciones"
+  },
+  {
+    "descripcion": "OPENAI *CHATGPT SUBSCR",
+    "categoria": "Suscripciones"
+  },
+  {
+    "descripcion": "OSDE 210 CUOTA MENSUAL",
+    "categoria": "Salud y Farmacia"
+  },
+  {
+    "descripcion": "PAGOFACIL EDECOR",
+    "categoria": "Servicios"
+  },
+  {
+    "descripcion": "PEDIDOSYA",
+    "categoria": "Gastronomía"
+  },
+  {
+    "descripcion": "SHELL SELECT RUTA 9",
+    "categoria": "Combustible"
+  },
+  {
+    "descripcion": "SPOTIFY AB",
+    "categoria": "Suscripciones"
+  },
+  {
+    "descripcion": "STARBUCKS ALTO PALERMO",
+    "categoria": "Gastronomía"
+  },
+  {
+    "descripcion": "SU PAGO - GRACIAS",
+    "categoria": "Pagos y Transferencias"
+  },
+  {
+    "descripcion": "SUBE CARGA ONLINE",
+    "categoria": "Transporte"
+  },
+  {
+    "descripcion": "UBER *TRIP",
+    "categoria": "Transporte"
+  },
+  {
+    "descripcion": "YPF FULL CBA CENTRO",
+    "categoria": "Combustible"
+  }
+]

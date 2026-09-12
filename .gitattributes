@@ -1,0 +1,3 @@
+# Todo texto se guarda con LF y también se saca con LF, incluso en Windows.
+* text=auto eol=lf
+*.pdf binary

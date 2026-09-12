@@ -1,0 +1,38 @@
+# El nombre del proyecto va fijo: si dependiera de la carpeta, renombrarla haría
+# que Compose buscara otro volumen y arrancara con una base vacía.
+name: centavo
+
+services:
+  db:
+    # pgvector viene incluido: no se usa todavía, pero tenerlo ahora evita
+    # migrar la imagen si algún día entran los embeddings.
+    image: pgvector/pgvector:pg16
+    container_name: centavo-db
+    # Usuario y base DENTRO de Postgres. Quedaron de cuando el proyecto se
+    # llamaba Libro Mayor: renombrarlos toca la base con datos (ver TRASPASO.md).
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-libro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-libro}
+      POSTGRES_DB: ${POSTGRES_DB:-libro_mayor}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # todo lo que esté acá corre una sola vez, al crear el volumen
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-libro} -d ${POSTGRES_DB:-libro_mayor}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # La notebook tiene 16 GB y Postgres no es el protagonista.
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+volumes:
+  pgdata:
+    # El volumen con los meses reales se creó cuando el proyecto se llamaba
+    # Libro Mayor. Se lo apunta por su nombre para no perderlo.
+    name: libro-mayor_pgdata

@@ -1,0 +1,450 @@
+{
+  "scorecard": {
+    "cuando": "2026-09-10T02:33:34+00:00",
+    "modo": "flota",
+    "senal": {
+      "error_si_acuerdo": 0.067,
+      "error_si_desacuerdo": 0.636,
+      "n_acuerdo": 15,
+      "n_desacuerdo": 11,
+      "error_si_conf_alta": 0.286,
+      "error_si_conf_baja": 0.4,
+      "n_conf_alta": 21,
+      "n_conf_baja": 5
+    },
+    "modelo": "qwen2.5:7b",
+    "umbral": 0.75,
+    "casos": 26,
+    "errores": 0,
+    "acierto_sobre_resueltos": 0.875,
+    "acierto_sobre_todo": 0.692,
+    "cobertura": 0.615,
+    "a_revision": 10,
+    "via_regla": 0,
+    "llamadas_modelo": 52,
+    "reparaciones": 0,
+    "tokens_entrada": 31514,
+    "tokens_salida": 2491,
+    "segundos_total": 384.9,
+    "segundos_por_caso": 14.81
+  },
+  "detalle": [
+    {
+      "descripcion": "AUTOPISTA AUSOL TELEPEAJE",
+      "esperada": "Transporte",
+      "obtenida": "Transporte",
+      "confianza": 0.0,
+      "via": "desacuerdo",
+      "estado": "needs_review",
+      "acerto": true,
+      "comercio": "Ausol",
+      "acuerdo": false,
+      "opiniones": {
+        "categorizador": "Transporte",
+        "comercio": "Otros"
+      },
+      "motivo": "desacuerdo: el categorizador dice 'Transporte' y el de comercios dice 'Otros'"
+    },
+    {
+      "descripcion": "AYSA SERVICIOS",
+      "esperada": "Servicios",
+      "obtenida": "Servicios",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "AYSA",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Servicios",
+        "comercio": "Servicios"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "CABIFY ARG",
+      "esperada": "Transporte",
+      "obtenida": "Transporte",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Cabify",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Transporte",
+        "comercio": "Transporte"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "CLARO AR PREPAGO",
+      "esperada": "Telefonía e Internet",
+      "obtenida": "Telefonía e Internet",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Claro",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Telefonía e Internet",
+        "comercio": "Telefonía e Internet"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "COTO CICSA 0034",
+      "esperada": "Supermercado y Almacén",
+      "obtenida": "Supermercado y Almacén",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Coto",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Supermercado y Almacén",
+        "comercio": "Supermercado y Almacén"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "DECATHLON ARG",
+      "esperada": "Indumentaria",
+      "obtenida": "Indumentaria",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Decathlon",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Indumentaria",
+        "comercio": "Indumentaria"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "DLO*SPOTIFY",
+      "esperada": "Suscripciones",
+      "obtenida": "Suscripciones",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Spotify",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Suscripciones",
+        "comercio": "Suscripciones"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "EDESUR SA",
+      "esperada": "Servicios",
+      "obtenida": "Servicios",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "EDESUR",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Servicios",
+        "comercio": "Servicios"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "GARBARINO 12 CUOTAS",
+      "esperada": "Hogar y Electro",
+      "obtenida": "Indumentaria",
+      "confianza": 0.0,
+      "via": "desacuerdo",
+      "estado": "needs_review",
+      "acerto": false,
+      "comercio": "Garbarino",
+      "acuerdo": false,
+      "opiniones": {
+        "categorizador": "Indumentaria",
+        "comercio": "Otros"
+      },
+      "motivo": "desacuerdo: el categorizador dice 'Indumentaria' y el de comercios dice 'Otros'"
+    },
+    {
+      "descripcion": "LIBRERIA YENNY",
+      "esperada": "Educación",
+      "obtenida": "Educación",
+      "confianza": 0.0,
+      "via": "desacuerdo",
+      "estado": "needs_review",
+      "acerto": true,
+      "comercio": "Librería Yenny",
+      "acuerdo": false,
+      "opiniones": {
+        "categorizador": "Educación",
+        "comercio": "Otros"
+      },
+      "motivo": "desacuerdo: el categorizador dice 'Educación' y el de comercios dice 'Otros'"
+    },
+    {
+      "descripcion": "MERPAGO*KIOSCO LA ESQ",
+      "esperada": "Supermercado y Almacén",
+      "obtenida": "Supermercado y Almacén",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "KIOSCO LA ESQ",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Supermercado y Almacén",
+        "comercio": "Supermercado y Almacén"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "MERPAGO*LA ESQUINA",
+      "esperada": "Supermercado y Almacén",
+      "obtenida": "Supermercado y Almacén",
+      "confianza": 0.9,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "La Esquina",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Supermercado y Almacén",
+        "comercio": "Supermercado y Almacén"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "MUSIMUNDO CUOTA 7/12",
+      "esperada": "Hogar y Electro",
+      "obtenida": "Indumentaria",
+      "confianza": 0.9,
+      "via": "evidencia",
+      "estado": "resuelto",
+      "acerto": false,
+      "comercio": "MUSIMUNDO CUOTA 7/12",
+      "acuerdo": false,
+      "opiniones": {
+        "categorizador": "Suscripciones",
+        "comercio": "Indumentaria"
+      },
+      "motivo": "evidencia determinista descarta categorizador=Suscripciones (plan de cuotas 7/12)"
+    },
+    {
+      "descripcion": "MUSIMUNDO ONLINE",
+      "esperada": "Hogar y Electro",
+      "obtenida": "Entretenimiento",
+      "confianza": 0.9,
+      "via": "desacuerdo",
+      "estado": "needs_review",
+      "acerto": false,
+      "comercio": "Musimundo",
+      "acuerdo": false,
+      "opiniones": {
+        "categorizador": "Entretenimiento",
+        "comercio": "Indumentaria"
+      },
+      "motivo": "desacuerdo: el categorizador dice 'Entretenimiento' y el de comercios dice 'Indumentaria'"
+    },
+    {
+      "descripcion": "NETFLIX.COM",
+      "esperada": "Suscripciones",
+      "obtenida": "Entretenimiento",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": false,
+      "comercio": "Netflix",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Entretenimiento",
+        "comercio": "Entretenimiento"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "OPENAI *CHATGPT SUBSCR",
+      "esperada": "Suscripciones",
+      "obtenida": "Suscripciones",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "OpenAI",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Suscripciones",
+        "comercio": "Suscripciones"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "OSDE 210 CUOTA MENSUAL",
+      "esperada": "Salud y Farmacia",
+      "obtenida": "Pagos y Transferencias",
+      "confianza": 0.85,
+      "via": "desacuerdo",
+      "estado": "needs_review",
+      "acerto": false,
+      "comercio": "OSDE",
+      "acuerdo": false,
+      "opiniones": {
+        "categorizador": "Pagos y Transferencias",
+        "comercio": "Servicios"
+      },
+      "motivo": "desacuerdo: el categorizador dice 'Pagos y Transferencias' y el de comercios dice 'Servicios'"
+    },
+    {
+      "descripcion": "PAGOFACIL EDECOR",
+      "esperada": "Servicios",
+      "obtenida": "Pagos y Transferencias",
+      "confianza": 0.9,
+      "via": "desacuerdo",
+      "estado": "needs_review",
+      "acerto": false,
+      "comercio": "EDECOR",
+      "acuerdo": false,
+      "opiniones": {
+        "categorizador": "Pagos y Transferencias",
+        "comercio": "Hogar y Electro"
+      },
+      "motivo": "desacuerdo: el categorizador dice 'Pagos y Transferencias' y el de comercios dice 'Hogar y Electro'"
+    },
+    {
+      "descripcion": "PEDIDOSYA",
+      "esperada": "Gastronomía",
+      "obtenida": "Pagos y Transferencias",
+      "confianza": 0.0,
+      "via": "desacuerdo",
+      "estado": "needs_review",
+      "acerto": false,
+      "comercio": "PedidosYa",
+      "acuerdo": false,
+      "opiniones": {
+        "categorizador": "Pagos y Transferencias",
+        "comercio": "Otros"
+      },
+      "motivo": "desacuerdo: el categorizador dice 'Pagos y Transferencias' y el de comercios dice 'Otros'"
+    },
+    {
+      "descripcion": "SHELL SELECT RUTA 9",
+      "esperada": "Combustible",
+      "obtenida": "Combustible",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Shell",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Combustible",
+        "comercio": "Combustible"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "SPOTIFY AB",
+      "esperada": "Suscripciones",
+      "obtenida": "Suscripciones",
+      "confianza": 0.9,
+      "via": "desacuerdo",
+      "estado": "needs_review",
+      "acerto": true,
+      "comercio": "Spotify",
+      "acuerdo": false,
+      "opiniones": {
+        "categorizador": "Suscripciones",
+        "comercio": "Entretenimiento"
+      },
+      "motivo": "desacuerdo: el categorizador dice 'Suscripciones' y el de comercios dice 'Entretenimiento'"
+    },
+    {
+      "descripcion": "STARBUCKS ALTO PALERMO",
+      "esperada": "Gastronomía",
+      "obtenida": "Gastronomía",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Starbucks",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Gastronomía",
+        "comercio": "Gastronomía"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "SU PAGO - GRACIAS",
+      "esperada": "Pagos y Transferencias",
+      "obtenida": "Pagos y Transferencias",
+      "confianza": 0.6,
+      "via": "desacuerdo",
+      "estado": "needs_review",
+      "acerto": true,
+      "comercio": "Otros",
+      "acuerdo": false,
+      "opiniones": {
+        "categorizador": "Pagos y Transferencias",
+        "comercio": "Impuestos y Comisiones"
+      },
+      "motivo": "desacuerdo: el categorizador dice 'Pagos y Transferencias' y el de comercios dice 'Impuestos y Comisiones'"
+    },
+    {
+      "descripcion": "SUBE CARGA ONLINE",
+      "esperada": "Transporte",
+      "obtenida": "Pagos y Transferencias",
+      "confianza": 0.9,
+      "via": "desacuerdo",
+      "estado": "needs_review",
+      "acerto": false,
+      "comercio": "SUBE",
+      "acuerdo": false,
+      "opiniones": {
+        "categorizador": "Pagos y Transferencias",
+        "comercio": "Transporte"
+      },
+      "motivo": "desacuerdo: el categorizador dice 'Pagos y Transferencias' y el de comercios dice 'Transporte'"
+    },
+    {
+      "descripcion": "UBER *TRIP",
+      "esperada": "Transporte",
+      "obtenida": "Transporte",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Uber",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Transporte",
+        "comercio": "Transporte"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    },
+    {
+      "descripcion": "YPF FULL CBA CENTRO",
+      "esperada": "Combustible",
+      "obtenida": "Combustible",
+      "confianza": 0.95,
+      "via": "consenso",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "YPF",
+      "acuerdo": true,
+      "opiniones": {
+        "categorizador": "Combustible",
+        "comercio": "Combustible"
+      },
+      "motivo": "los dos agentes llegaron a lo mismo por caminos distintos"
+    }
+  ],
+  "errores": []
+}

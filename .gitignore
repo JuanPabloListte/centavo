@@ -1,0 +1,20 @@
+# Secretos y entorno local
+.env
+api/.venv/
+
+# Resúmenes reales. Tienen CVU, CUIT y nombres de terceros: nunca se versionan.
+# tests/fixtures/ es sólo para sintéticos, que sí se versionan.
+privado/
+
+# Frontend
+web/node_modules/
+web/dist/
+
+# Artefactos
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Ningún PDF se versiona, salvo los sintéticos de los tests.
+*.pdf
+!api/tests/fixtures/*.pdf

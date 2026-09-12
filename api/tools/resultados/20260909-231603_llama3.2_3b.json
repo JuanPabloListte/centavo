@@ -1,0 +1,173 @@
+{
+  "scorecard": {
+    "cuando": "2026-09-10T02:16:03+00:00",
+    "modelo": "llama3.2:3b",
+    "umbral": 0.75,
+    "casos": 15,
+    "errores": 0,
+    "acierto_sobre_resueltos": 0.643,
+    "acierto_sobre_todo": 0.667,
+    "cobertura": 0.933,
+    "a_revision": 1,
+    "via_regla": 0,
+    "llamadas_modelo": 15,
+    "reparaciones": 0,
+    "tokens_entrada": 9491,
+    "tokens_salida": 694,
+    "segundos_total": 99.4,
+    "segundos_por_caso": 6.63
+  },
+  "detalle": [
+    {
+      "descripcion": "AYSA SERVICIOS",
+      "esperada": "Servicios",
+      "obtenida": "Servicios",
+      "confianza": 0.8,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "ABL"
+    },
+    {
+      "descripcion": "CLARO AR PREPAGO",
+      "esperada": "Telefonía e Internet",
+      "obtenida": "Pagos y Transferencias",
+      "confianza": 0.8,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": false,
+      "comercio": "Prepago"
+    },
+    {
+      "descripcion": "EDESUR SA",
+      "esperada": "Servicios",
+      "obtenida": "Servicios",
+      "confianza": 0.8,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Edesur SA"
+    },
+    {
+      "descripcion": "FARMACITY 0231",
+      "esperada": "Salud y Farmacia",
+      "obtenida": "Salud y Farmacia",
+      "confianza": 0.9,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Farmacia"
+    },
+    {
+      "descripcion": "LIBRERIA YENNY",
+      "esperada": "Educación",
+      "obtenida": "Educación",
+      "confianza": 0.0,
+      "via": "modelo",
+      "estado": "needs_review",
+      "acerto": true,
+      "comercio": "librería"
+    },
+    {
+      "descripcion": "MCDONALDS PATIO OLMOS",
+      "esperada": "Gastronomía",
+      "obtenida": "Gastronomía",
+      "confianza": 0.8,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Patio Olmos"
+    },
+    {
+      "descripcion": "MERPAGO*KIOSCO LA ESQ",
+      "esperada": "Supermercado y Almacén",
+      "obtenida": "Supermercado y Almacén",
+      "confianza": 0.8,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Kiosco"
+    },
+    {
+      "descripcion": "MERPAGO*PANADERIA SANT",
+      "esperada": "Supermercado y Almacén",
+      "obtenida": "Supermercado y Almacén",
+      "confianza": 0.8,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Panadería"
+    },
+    {
+      "descripcion": "MUSIMUNDO CUOTA 7/12",
+      "esperada": "Hogar y Electro",
+      "obtenida": "Pagos y Transferencias",
+      "confianza": 0.8,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": false,
+      "comercio": "Músimundo"
+    },
+    {
+      "descripcion": "NETFLIX.COM",
+      "esperada": "Suscripciones",
+      "obtenida": "Entretenimiento",
+      "confianza": 0.9,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": false,
+      "comercio": "Netflix"
+    },
+    {
+      "descripcion": "PEDIDOSYA",
+      "esperada": "Gastronomía",
+      "obtenida": "Pagos y Transferencias",
+      "confianza": 0.8,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": false,
+      "comercio": "Pedidos de comida"
+    },
+    {
+      "descripcion": "SPOTIFY AB",
+      "esperada": "Suscripciones",
+      "obtenida": "Suscripciones",
+      "confianza": 0.8,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Streaming"
+    },
+    {
+      "descripcion": "SU PAGO - GRACIAS",
+      "esperada": "Pagos y Transferencias",
+      "obtenida": "Pagos y Transferencias",
+      "confianza": 0.9,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Su pago"
+    },
+    {
+      "descripcion": "UBER *TRIP",
+      "esperada": "Transporte",
+      "obtenida": "Transporte",
+      "confianza": 0.8,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": true,
+      "comercio": "Uber"
+    },
+    {
+      "descripcion": "YPF FULL CBA CENTRO",
+      "esperada": "Combustible",
+      "obtenida": "Pagos y Transferencias",
+      "confianza": 0.8,
+      "via": "modelo",
+      "estado": "resuelto",
+      "acerto": false,
+      "comercio": "YPF"
+    }
+  ],
+  "errores": []
+}
